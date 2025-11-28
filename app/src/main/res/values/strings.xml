@@ -1,3 +1,9 @@
 <resources>
     <string name="app_name">P Layer</string>
+    <!--BottomBar-->
+    <string name="fetch">Get</string>
+    <string name="home">Home</string>
+    <string name="config">Config</string>
+    <!--HomeContent-->
+    <string name="click_to_login">Click to Login</string>
 </resources>
