@@ -26,9 +26,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlin.properties.Delegates
+import androidx.compose.runtime.LaunchedEffect
 
 
 @Composable
@@ -43,8 +46,15 @@ fun HomeContent() {
 
 @Composable
 fun LoginCard() {
+    val context = LocalContext.current
+    var refreshTrigger by remember { mutableStateOf(0) }
+    var isLogin by remember {
+        mutableStateOf(IOBundle.get(context,"login","isLogin",false) as Boolean)
+    }
     var showDialog by remember { mutableStateOf(false) }
-
+    LaunchedEffect(refreshTrigger) {
+        isLogin = IOBundle.get(context, "login", "isLogin", false) as Boolean
+    }
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -88,10 +98,17 @@ fun LoginCard() {
                     .fillMaxWidth()
                     .offset(x=20.dp),
             ) {
-                Text(
-                    text = stringResource(R.string.click_to_login),
-                    fontSize = 20.sp
-                )
+                when (isLogin as Boolean){
+                    true ->Text(
+                        text = IOBundle.get(context,"login","Username","") as String,
+                        fontSize = 20.sp
+                    )
+                    false ->Text(
+                        text = stringResource(R.string.click_to_login),
+                        fontSize = 20.sp
+                    )
+
+                }
             }
         }
 
@@ -100,11 +117,14 @@ fun LoginCard() {
                 onDismiss = {
                     showDialog = false
                 },
-                onRegister = {
+                onRegister = { email,password ->
                     showDialog = false
                 },
-                onLogin = {
+                onLogin = { email,password ->
+                    IOBundle.save(context,"login","isLogin", true)
+                    IOBundle.save(context,"login","Username",email)
                     showDialog = false
+                    refreshTrigger++
                 }
             )
         }

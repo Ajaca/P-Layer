@@ -1,10 +1,12 @@
 package com.alimanab.player
 
 object AccountManager {
-    var isLogin = false
-    fun Login() : Boolean {
-        //TODO
-        return true
+    fun AccountVerify(account : String) : Boolean {
+        return account.isNotEmpty()
+    }
+
+    fun PasswordVerify(password : String) : Boolean {
+        return (password.length >= 4 && password.matches(Regex("^[a-zA-Z0-9]*$")))
     }
 
     fun Logout() : Boolean {

@@ -28,32 +28,30 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.material3.SearchBar
 
 @Composable
 fun FetchContent() {
-    val data = listOf("Apple", "Banana", "Orange", "Grape")
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        contentAlignment = Alignment.Center
-    ){
-        SimpleList(data)
-    }
-}
 
+}
+/*
 @Composable
-fun SimpleList(items: List<String>) {
-    LazyColumn(verticalArrangement = Arrangement.spacedBy(1.dp)) {
-        items(items) { item ->
-            Text(
-                text = item,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp)
-            )
-        }
-    }
+fun SearchBox() {
+    SearchBar(
+        modifier = Modifier
+            .fillMaxWidth(),
+        inputField = TODO(),
+        expanded = TODO(),
+        onExpandedChange = TODO(),
+        shape = TODO(),
+        colors = TODO(),
+        tonalElevation = TODO(),
+        shadowElevation = TODO(),
+        windowInsets = TODO(),
+    ) { }
 }
 
 
+
+
+ */

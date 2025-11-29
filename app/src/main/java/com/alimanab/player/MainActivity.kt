@@ -1,16 +1,15 @@
 package com.alimanab.player
 
+import SQLManager
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.material.icons.Icons
@@ -33,12 +32,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
+import androidx.compose.runtime.remember
 
 class MainActivity : ComponentActivity() {
+    private lateinit var DB: SQLManager
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        DB = SQLManager(this)
         setContent {
             Theme {
                 Surface(
@@ -62,6 +63,7 @@ fun Theme(content: @Composable () -> Unit) {
 @Composable
 fun MainScreen() {
     var selectedItem by rememberSaveable {mutableStateOf(0)}
+    var isPlaying by remember { mutableStateOf(true) }
     val navItems = listOf(
         BottomNavigationItem(
             title = stringResource(R.string.fetch),
@@ -81,14 +83,23 @@ fun MainScreen() {
     )
     Scaffold(
         bottomBar = {
-            BottomAppBar {
-                navItems.forEachIndexed { index, item ->
-                    NavigationBarItem(
-                        selected = selectedItem == index,
-                        onClick = { selectedItem = index },
-                        icon = { Icon(imageVector = item.icon, contentDescription = item.title) },
-                        label = { Text(text = item.title) }
+            Column(){
+                if (isPlaying) {
+                    NowPlayingCard(
+                        onClick = {
+                            // TODO:
+                        }
                     )
+                }
+                BottomAppBar {
+                    navItems.forEachIndexed { index, item ->
+                        NavigationBarItem(
+                            selected = selectedItem == index,
+                            onClick = { selectedItem = index },
+                            icon = { Icon(imageVector = item.icon, contentDescription = item.title) },
+                            label = { Text(text = item.title) }
+                        )
+                    }
                 }
             }
         },
