@@ -19,6 +19,8 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -40,6 +42,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.sp
@@ -53,6 +56,7 @@ fun singleButton(modifier: Modifier,text : String,onClick : () -> Unit) {
 
 @Composable
 fun NowPlayingCard(onClick: () -> Unit) {
+    var isPlaying by remember { mutableStateOf(false) }
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -95,12 +99,12 @@ fun NowPlayingCard(onClick: () -> Unit) {
 
                 Spacer(modifier = Modifier.weight(1f))
 
-                // 可以添加播放/暂停按钮等控制元素
-                Text(
-                    text = "点击查看",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.primary
-                )
+                IconButton(onClick = { isPlaying  = !(isPlaying) }) {
+                    Text(
+                        text = if (isPlaying) "⏸" else "▶",
+                        fontSize = 24.sp
+                    )
+                }
             }
         }
     }
