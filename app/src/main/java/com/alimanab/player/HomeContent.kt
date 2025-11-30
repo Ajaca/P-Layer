@@ -1,16 +1,23 @@
 package com.alimanab.player
 
+import android.widget.Toast
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -32,15 +39,50 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlin.properties.Delegates
 import androidx.compose.runtime.LaunchedEffect
-
+import androidx.compose.ui.graphics.RectangleShape
 
 @Composable
 fun HomeContent() {
+    val context = LocalContext.current
+    var isLogin by remember { mutableStateOf(IOBundle.get(context,"login","isLogin",false) as Boolean) }
+
     Column(modifier = Modifier
         .fillMaxSize()
         .padding(16.dp)
     ) {
         LoginCard()
+        CardSongsList("My Playlist")
+        /*
+        LazyColumn(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+            items(settingItems.size) { index ->
+                val item = settingItems[index]
+                var isTextDialog by remember { mutableStateOf(false) }
+                var isPathDialog by remember { mutableStateOf(false) }
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(color = MaterialTheme.colorScheme.surface)
+                        .clickable { }
+                ) {
+                    Text(text = item.title, fontSize = 20.sp)
+                    Text(text = item.description, fontSize = 15.sp)
+                    Spacer(Modifier
+                        .fillMaxWidth()
+                        .height(20.dp))
+                }
+                if (isTextDialog) {
+                    TextConfigDialog(title = item.title,hint = item.hint){
+                        isTextDialog = false
+                    }
+                }
+                if (isPathDialog) {
+                    PathConfigDialog(title = item.title,hint = item.hint){
+                        isTextDialog = false
+                    }
+                }
+            }
+        }
+    }*/
     }
 }
 
@@ -59,12 +101,14 @@ fun LoginCard() {
         modifier = Modifier
             .fillMaxWidth()
             .padding(16.dp)
-            .clickable{ showDialog = true },
+            .clickable(
+                enabled = !isLogin,
+                onClick = {showDialog = true}
+            ),
         elevation = CardDefaults.cardElevation(4.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
-        ),
-        onClick = { showDialog = true }
+        )
     ) {
         Row(
             modifier = Modifier
@@ -127,6 +171,50 @@ fun LoginCard() {
                     refreshTrigger++
                 }
             )
+        }
+    }
+}
+
+@Composable
+fun CardSongsList(text : String) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp)
+            .clickable{  },
+        elevation = CardDefaults.cardElevation(4.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Surface(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(shape = RectangleShape),
+                color = MaterialTheme.colorScheme.primaryContainer,
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Favorite,
+                    contentDescription = "playlist",
+                    modifier = Modifier
+                        .size(16.dp)
+                        .padding(8.dp),
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+            }
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .offset(x=20.dp),
+            ) {
+                Text(text = text, fontSize = 20.sp)
+            }
         }
     }
 }

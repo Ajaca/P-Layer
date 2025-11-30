@@ -13,14 +13,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Notifications
@@ -44,7 +42,7 @@ import androidx.compose.ui.unit.dp
 
 @Composable
 fun MusicPlayerScreen(
-    onBackPressed: () -> Unit
+    onBack: () -> Unit
 ) {
     var isPlaying by remember { mutableStateOf(false) }
     var currentProgress by remember { mutableStateOf(0f) }
@@ -160,7 +158,7 @@ fun MusicPlayerScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             // 返回按钮
-            IconButton(onClick = onBackPressed) {
+            IconButton(onClick = onBack) {
                 Icon(
                     imageVector = Icons.Default.ArrowBack,
                     contentDescription = "返回"

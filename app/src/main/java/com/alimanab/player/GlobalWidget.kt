@@ -55,8 +55,8 @@ fun singleButton(modifier: Modifier,text : String,onClick : () -> Unit) {
 }
 
 @Composable
-fun NowPlayingCard(onClick: () -> Unit) {
-    var isPlaying by remember { mutableStateOf(false) }
+fun NowPlayingCard(isplay : Boolean,onCardClick: () -> Unit,onPlayClick : (Boolean) -> Unit) {
+    var isPlaying by remember { mutableStateOf(isplay) }
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -65,7 +65,7 @@ fun NowPlayingCard(onClick: () -> Unit) {
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant
         ),
-        onClick = onClick
+        onClick = onCardClick
     ) {
         Box(
             modifier = Modifier
@@ -76,9 +76,8 @@ fun NowPlayingCard(onClick: () -> Unit) {
             Row(
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // 这里可以添加专辑封面、歌曲信息等
                 Icon(
-                    imageVector = Icons.Default.Home, // 临时使用Home图标，你可以替换为音乐图标
+                    imageVector = Icons.Default.Home,
                     contentDescription = "Now Playing",
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.padding(end = 12.dp)
@@ -86,12 +85,12 @@ fun NowPlayingCard(onClick: () -> Unit) {
 
                 Column {
                     Text(
-                        text = "正在播放",
+                        text = "is Playing",
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        text = "当前歌曲名称", // 这里可以动态设置实际歌曲名
+                        text = "Song Sample",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -99,7 +98,7 @@ fun NowPlayingCard(onClick: () -> Unit) {
 
                 Spacer(modifier = Modifier.weight(1f))
 
-                IconButton(onClick = { isPlaying  = !(isPlaying) }) {
+                IconButton(onClick = { onPlayClick(isPlaying) }) {
                     Text(
                         text = if (isPlaying) "⏸" else "▶",
                         fontSize = 24.sp

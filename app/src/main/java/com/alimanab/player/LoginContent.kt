@@ -1,6 +1,6 @@
 package com.alimanab.player
 
-import SQLManager
+import com.alimanab.player.SQL
 import android.widget.Toast
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -19,6 +19,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -55,14 +56,14 @@ fun LoginDialog(
                 }
                 Spacer(modifier = Modifier.height(16.dp))
 
-                TextField(
+                OutlinedTextField(
                     value = email,
                     onValueChange = { email = it },
                     label = { Text("Account") },
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                TextField(
+                OutlinedTextField(
                     value = password,
                     onValueChange = { password = it },
                     label = { Text("Password") },
