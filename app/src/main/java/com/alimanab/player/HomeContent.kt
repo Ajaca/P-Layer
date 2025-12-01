@@ -1,16 +1,18 @@
 package com.alimanab.player
 
+import android.app.Activity.RESULT_OK
+import android.content.Intent
+import android.util.Log
 import android.widget.Toast
-import androidx.compose.foundation.background
+import androidx.activity.ComponentActivity
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -37,73 +39,73 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import kotlin.properties.Delegates
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.tooling.preview.Preview
+import kotlin.jvm.java
 
 @Composable
 fun HomeContent() {
     val context = LocalContext.current
     var isLogin by remember { mutableStateOf(IOBundle.get(context,"login","isLogin",false) as Boolean) }
-
+    var refreshTrigger by remember { mutableStateOf(0) }
+    LaunchedEffect(refreshTrigger) { isLogin = IOBundle.get(context, "login", "isLogin", false) as Boolean }
     Column(modifier = Modifier
         .fillMaxSize()
         .padding(16.dp)
     ) {
-        LoginCard()
-        CardSongsList("My Playlist")
-        /*
-        LazyColumn(verticalArrangement = Arrangement.spacedBy(1.dp)) {
-            items(settingItems.size) { index ->
-                val item = settingItems[index]
-                var isTextDialog by remember { mutableStateOf(false) }
-                var isPathDialog by remember { mutableStateOf(false) }
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(color = MaterialTheme.colorScheme.surface)
-                        .clickable { }
-                ) {
-                    Text(text = item.title, fontSize = 20.sp)
-                    Text(text = item.description, fontSize = 15.sp)
-                    Spacer(Modifier
-                        .fillMaxWidth()
-                        .height(20.dp))
+        LoginCard(isLogin){ isLogin = true ; refreshTrigger++ }
+        CardSongsList("All Songs"){
+            val intent = Intent(context, SongsListActivity::class.java).apply {
+                putExtra("song_list_id", -1)
+                putExtra("list_name", "All Songs")
+            }
+            startActivityLauncher.launch(intent)
+        }
+
+        if (isLogin) {
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                val SongsList = listOf(
+                    SongsListElement(
+                        name = "Sample SongList 1",
+                        id = 0,
+                        owner = 0
+                    ),
+                    SongsListElement(
+                        name = "Sample SongList 2",
+                        id = 0,
+                        owner = 0
+                    )
+                )
+                items(SongsList.size) { index ->
+                    CardSongsList(SongsList[index].name){}
                 }
-                if (isTextDialog) {
-                    TextConfigDialog(title = item.title,hint = item.hint){
-                        isTextDialog = false
-                    }
-                }
-                if (isPathDialog) {
-                    PathConfigDialog(title = item.title,hint = item.hint){
-                        isTextDialog = false
-                    }
+
+                item{
+                    CardSongsList("Add new List"){}
                 }
             }
         }
-    }*/
     }
 }
 
+data class SongsListElement(
+    val name : String,
+    val id : Int,
+    val owner : Int
+)
+
 @Composable
-fun LoginCard() {
+fun LoginCard(isLogin : Boolean, onLogin : () -> Unit) {
     val context = LocalContext.current
-    var refreshTrigger by remember { mutableStateOf(0) }
-    var isLogin by remember {
-        mutableStateOf(IOBundle.get(context,"login","isLogin",false) as Boolean)
-    }
     var showDialog by remember { mutableStateOf(false) }
-    LaunchedEffect(refreshTrigger) {
-        isLogin = IOBundle.get(context, "login", "isLogin", false) as Boolean
-    }
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(16.dp)
             .clickable(
                 enabled = !isLogin,
-                onClick = {showDialog = true}
+                onClick = { showDialog = true }
             ),
         elevation = CardDefaults.cardElevation(4.dp),
         colors = CardDefaults.cardColors(
@@ -168,7 +170,7 @@ fun LoginCard() {
                     IOBundle.save(context,"login","isLogin", true)
                     IOBundle.save(context,"login","Username",email)
                     showDialog = false
-                    refreshTrigger++
+                    onLogin()
                 }
             )
         }
@@ -176,12 +178,12 @@ fun LoginCard() {
 }
 
 @Composable
-fun CardSongsList(text : String) {
+fun CardSongsList(text: String, onClick: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(16.dp)
-            .clickable{  },
+            .clickable{ onClick() },
         elevation = CardDefaults.cardElevation(4.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
@@ -216,5 +218,13 @@ fun CardSongsList(text : String) {
                 Text(text = text, fontSize = 20.sp)
             }
         }
+    }
+}
+
+@Preview
+@Composable
+fun HomePreview() {
+    Theme{
+        HomeContent()
     }
 }

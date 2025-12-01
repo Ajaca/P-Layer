@@ -37,8 +37,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 
 @Composable
 fun MusicPlayerScreen(
@@ -57,27 +59,15 @@ fun MusicPlayerScreen(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(32.dp)
     ) {
-        // 第一排：歌曲图标
-        Box(
-            modifier = Modifier
-                .size(200.dp)
-                .background(Color.Gray, CircleShape),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = Icons.Default.Notifications,
-                contentDescription = "歌曲图标",
-                modifier = Modifier.size(80.dp),
-                tint = Color.White
-            )
-        }
-        Spacer(Modifier.height(150.dp))
+        Text(
+            modifier = Modifier.height(40.dp).fillMaxWidth(),
+            text = "Song Sample",
+            fontSize = 30.sp
+        )
 
-        // 第二排：3个按钮
         Row(
             horizontalArrangement = Arrangement.spacedBy(24.dp)
         ) {
-            // 喜欢按钮
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -88,14 +78,13 @@ fun MusicPlayerScreen(
                 ) {
                     Icon(
                         imageVector = if (isLiked) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
-                        contentDescription = "喜欢",
+                        contentDescription = "Fav",
                         tint = if (isLiked) Color.Red else LocalContentColor.current
                     )
                 }
-                Text(text = "喜欢")
+                Text(text = "Fav")
             }
 
-            // 收藏按钮
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -106,14 +95,13 @@ fun MusicPlayerScreen(
                 ) {
                     Icon(
                         imageVector = if (isCollected) Icons.Filled.Build else Icons.Filled.Done,
-                        contentDescription = "收藏",
+                        contentDescription = "List",
                         tint = if (isCollected) Color.Blue else LocalContentColor.current
                     )
                 }
-                Text(text = "收藏")
+                Text(text = "List")
             }
 
-            // 下载按钮
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -124,15 +112,14 @@ fun MusicPlayerScreen(
                 ) {
                     Icon(
                         imageVector = if (isDownloaded) Icons.Filled.Done else Icons.Filled.Add,
-                        contentDescription = "下载",
+                        contentDescription = "Download",
                         tint = if (isDownloaded) Color.Green else LocalContentColor.current
                     )
                 }
-                Text(text = "下载")
+                Text(text = "Down")
             }
         }
 
-        // 第三排：进度条
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -151,13 +138,11 @@ fun MusicPlayerScreen(
             }
         }
 
-        // 第四排：播放控制按钮和返回
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // 返回按钮
             IconButton(onClick = onBack) {
                 Icon(
                     imageVector = Icons.Default.ArrowBack,
@@ -165,7 +150,6 @@ fun MusicPlayerScreen(
                 )
             }
 
-            // 播放控制按钮
             Row(
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
                 verticalAlignment = Alignment.CenterVertically
@@ -196,13 +180,11 @@ fun MusicPlayerScreen(
                 }
             }
 
-            // 占位，保持对称
             Spacer(modifier = Modifier.size(48.dp))
         }
     }
 }
 
-// 时间格式化辅助函数
 private fun formatTime(seconds: Int): String {
     val minutes = seconds / 60
     val remainingSeconds = seconds % 60

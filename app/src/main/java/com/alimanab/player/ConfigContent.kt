@@ -3,6 +3,7 @@ package com.alimanab.player
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
+import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
@@ -10,28 +11,22 @@ import android.provider.DocumentsContract
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.collection.intFloatMapOf
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.add
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Card
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.CardDefaults
@@ -43,19 +38,51 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.core.content.ContextCompat
 import java.io.File
-import java.nio.file.WatchEvent
 
 @Composable
 fun ConfigContent() {
     val context = LocalContext.current
+
+    var permissionGranted by remember { mutableStateOf(false) }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        permissionGranted = granted
+        if (granted) {
+            Toast.makeText(context, "存储权限已授予", Toast.LENGTH_SHORT).show()
+        } else {
+            Toast.makeText(context, "需要存储权限才能使用完整功能", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    // 初始化权限检查
+    LaunchedEffect(Unit) {
+        val granted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            ContextCompat.checkSelfPermission(context, Manifest.permission.READ_MEDIA_AUDIO) == PackageManager.PERMISSION_GRANTED
+        } else {
+            ContextCompat.checkSelfPermission(context, Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
+        }
+        permissionGranted = granted
+
+        // 如果没有权限，自动申请
+        if (!granted) {
+            permissionLauncher.launch(
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU)
+                    Manifest.permission.READ_MEDIA_AUDIO
+                else
+                    Manifest.permission.READ_EXTERNAL_STORAGE
+            )
+        }
+    }
+
+
     var refreshTrigger by remember { mutableStateOf(0) }
     var isLogin by remember { mutableStateOf(IOBundle.get(context,"login","isLogin",false)) }
     LaunchedEffect(refreshTrigger) {
@@ -83,7 +110,6 @@ fun ConfigContent() {
             type = SettingType.list,
             todo =  false
         )
-
     )
     Column(modifier = Modifier
         .fillMaxSize()
@@ -120,7 +146,7 @@ fun ConfigContent() {
                                 SettingType.click -> {}
                             }
                             if (item.todo){
-                                ConfigTodo(item.title)
+                                ConfigTodo(context,item.title)
                             }
                         }
                 ) {
@@ -243,10 +269,9 @@ fun PathConfigDialog(
         ActivityResultContracts.OpenDocumentTree()
     ) { uri ->
         uri?.let { treeUri ->
-            // 解析 Uri 为真实路径
             val path = extractPathFromTreeUri(context, treeUri)
             if (!path.isNullOrEmpty()) {
-                selectedPath = path // 更新路径状态
+                selectedPath = path
             } else {
                 Toast.makeText(context, "Can not fetch the path", Toast.LENGTH_SHORT).show()
             }
@@ -262,7 +287,6 @@ fun PathConfigDialog(
             elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
-                // 标题
                 Text(
                     text = title,
                     style = MaterialTheme.typography.headlineSmall,
@@ -335,10 +359,198 @@ private fun extractPathFromTreeUri(context: Context, treeUri: android.net.Uri): 
 }
 
 
-fun ConfigTodo(title : String){
-    when (title){
+fun ConfigTodo(context: Context, title: String) {
+    when (title) {
         "Import Songs from Path" -> {
+            importSongsFromPath(context)
         }
         else -> {}
+    }
+}
+
+private fun importSongsFromPath(context: Context) {
+    try {
+        // 使用 IOBundle 读取配置的路径
+        val musicPathObj = IOBundle.get(context, "config", "musicpath", "")
+
+        // 检查是否返回了 StringCompanionObject
+        val musicPath = if (musicPathObj is String) {
+            musicPathObj
+        } else {
+            val pathStr = musicPathObj?.toString() ?: ""
+            if (pathStr == "kotlin.jvm.internal.StringCompanionObject" || pathStr.isEmpty()) {
+                Toast.makeText(context, "请先设置音乐路径", Toast.LENGTH_SHORT).show()
+                return
+            }
+            pathStr
+        }
+
+        if (musicPath.isEmpty()) {
+            Toast.makeText(context, "请先设置音乐路径", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val musicDir = File(musicPath)
+        if (!musicDir.exists() || !musicDir.isDirectory) {
+            Toast.makeText(context, "指定的路径不存在或不是目录: $musicPath", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        // 使用与 Config() 相同的递归扫描逻辑
+        val audioFiles = mutableListOf<File>()
+        traverseDirForImport(musicDir, audioFiles)
+
+        if (audioFiles.isEmpty()) {
+            Toast.makeText(context, "在指定路径下未找到音频文件", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        // 使用 SQL 方法导入数据库
+        val sqlHelper = SQLManager(context)
+        var newInsertCount = 0
+        var alreadyExistsCount = 0
+        var failedCount = 0
+
+        // 预先检查哪些歌曲已存在（优化性能）
+        val existingPaths = mutableSetOf<String>()
+        audioFiles.forEach { file ->
+            val song = createSongFromFile(file)
+            song?.let {
+                if (sqlHelper.isSongExists(it.path)) {
+                    existingPaths.add(it.path)
+                }
+            }
+        }
+
+        // 导入歌曲
+        audioFiles.forEach { file ->
+            val song = createSongFromFile(file)
+            if (song != null) {
+                if (existingPaths.contains(song.path)) {
+                    // 歌曲已存在（从预检查结果中获取）
+                    alreadyExistsCount++
+                } else {
+                    // 尝试插入新歌曲
+                    val result = sqlHelper.insertSong(song)
+                    if (result != -1L) {
+                        newInsertCount++
+                    } else {
+                        // 插入失败（可能是并发问题或其他错误）
+                        failedCount++
+                    }
+                }
+            } else {
+                failedCount++
+            }
+        }
+
+        // 构建准确的提示信息
+        val message = when {
+            newInsertCount > 0 && alreadyExistsCount > 0 ->
+                "成功导入 $newInsertCount 首新歌曲，$alreadyExistsCount 首已存在"
+            newInsertCount > 0 ->
+                "成功导入全部 $newInsertCount 首歌曲"
+            alreadyExistsCount > 0 && failedCount == 0 ->
+                "所有 ${alreadyExistsCount} 首歌曲均已存在"
+            failedCount > 0 ->
+                "导入完成：$newInsertCount 首新导入，$alreadyExistsCount 首已存在，$failedCount 首失败"
+            else ->
+                "导入完成，共处理 ${audioFiles.size} 首歌曲"
+        }
+
+        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+
+    } catch (e: Exception) {
+        e.printStackTrace()
+        Toast.makeText(context, "导入失败: ${e.message}", Toast.LENGTH_SHORT).show()
+    }
+}
+
+/**
+ * 与 Config() 中相同的目录遍历函数 - 重命名避免冲突
+ */
+private fun traverseDirForImport(dir: File, result: MutableList<File>) {
+    dir.listFiles()?.forEach { file ->
+        if (file.isDirectory) {
+            traverseDirForImport(file, result) // 递归
+        } else if (file.isFile && isAudioFile(file.name)) {
+            result.add(file)
+        }
+    }
+}
+
+/**
+ * 与 Config() 中完全相同的音频文件判断函数
+ */
+private fun isAudioFile(name: String): Boolean {
+    val n = name.lowercase()
+    return n.endsWith(".mp3") || n.endsWith(".flac") || n.endsWith(".wav") ||
+            n.endsWith(".m4a") || n.endsWith(".aac") || n.endsWith(".ogg") ||
+            n.endsWith(".wma") || n.endsWith(".ape")
+}
+
+/**
+ * 从 TreeUri 提取路径 - 与 Config() 中完全相同
+ */
+private fun extractPathFromTreeUri(treeUri: Uri): String? {
+    return try {
+        val docId = DocumentsContract.getTreeDocumentId(treeUri)
+        val parts = docId.split(":", limit = 2)
+        val (root, subPath) = if (parts.size == 1) parts[0] to "" else parts[0] to parts[1]
+
+        val basePath = when (root) {
+            "primary" -> Environment.getExternalStorageDirectory().absolutePath
+            else -> "/storage/$root"
+        }
+
+        if (subPath.isEmpty()) {
+            basePath
+        } else {
+            "$basePath/$subPath".replace("//", "/")
+        }
+    } catch (e: Exception) {
+        null
+    }
+}
+
+/**
+ * 创建 SongModel 对象 - 根据 SQL 需求调整
+ */
+private fun createSongFromFile(file: File): SongModel? {
+    return try {
+        // 使用 MediaMetadataRetriever 提取元数据（与 Config() 中的扫描逻辑配合）
+        val mediaMetadataRetriever = MediaMetadataRetriever()
+        mediaMetadataRetriever.setDataSource(file.absolutePath)
+
+        val title = mediaMetadataRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_TITLE)
+            ?: file.nameWithoutExtension
+
+        val artist = mediaMetadataRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST)
+            ?: "未知艺术家"
+
+        val durationStr = mediaMetadataRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
+        val duration = durationStr?.toIntOrNull() ?: 0
+
+        mediaMetadataRetriever.release()
+
+        SongModel(
+            title = title,
+            artist = artist,
+            duration = duration,
+            path = file.absolutePath,
+            fileName = file.name,
+            size = file.length()
+        )
+    } catch (e: Exception) {
+        println("无法读取音频元数据: ${file.absolutePath}, ${e.message}")
+        // 即使无法读取元数据，也创建一个基本的 SongModel
+        SongModel(
+            title = file.nameWithoutExtension,
+            artist = "未知艺术家",
+            duration = 0,
+            path = file.absolutePath,
+            fileName = file.name,
+            size = file.length()
+        )
     }
 }

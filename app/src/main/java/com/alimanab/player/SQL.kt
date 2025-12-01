@@ -6,7 +6,6 @@ import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 
-// 数据库帮助类（负责表创建和升级）
 class SQL(context: Context?) : SQLiteOpenHelper(context, "SimpleMusic.db", null, 2) {
 
     override fun onCreate(db: SQLiteDatabase?) {
@@ -98,13 +97,11 @@ class SQL(context: Context?) : SQLiteOpenHelper(context, "SimpleMusic.db", null,
             // 删除旧表
             db?.execSQL("DROP TABLE IF EXISTS playlists")
 
-            // 重命名临时表为正式表
             db?.execSQL("ALTER TABLE playlists_temp RENAME TO playlists")
         }
     }
 }
 
-// 数据库管理类（整合所有数据库操作，无重复定义）
 class SQLManager(context: Context) {
     private val dbHelper = SQL(context)
 
@@ -359,6 +356,35 @@ class SQLManager(context: Context) {
             e.printStackTrace()
             false
         } finally {
+            db.close()
+        }
+    }
+    fun isSongExists(path: String): Boolean {
+        val db = dbHelper.readableDatabase
+        val cursor = db.rawQuery(
+            "SELECT COUNT(*) FROM songs WHERE path = ?",
+            arrayOf(path)
+        )
+        return try {
+            cursor.moveToFirst()
+            cursor.getInt(0) > 0
+        } finally {
+            cursor.close()
+            db.close()
+        }
+    }
+
+    /**
+     * 获取数据库中歌曲的总数
+     */
+    fun getSongCount(): Int {
+        val db = dbHelper.readableDatabase
+        val cursor = db.rawQuery("SELECT COUNT(*) FROM songs", null)
+        return try {
+            cursor.moveToFirst()
+            cursor.getInt(0)
+        } finally {
+            cursor.close()
             db.close()
         }
     }

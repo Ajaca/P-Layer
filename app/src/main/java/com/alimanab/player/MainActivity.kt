@@ -1,11 +1,15 @@
 package com.alimanab.player
 
+import android.content.Intent
 import com.alimanab.player.SQL
 import android.os.Bundle
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -46,11 +50,21 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
 
+
+lateinit var startActivityLauncher: ActivityResultLauncher<Intent>
+
 class MainActivity : ComponentActivity() {
     private lateinit var DB: SQLManager
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        startActivityLauncher = registerForActivityResult(
+            ActivityResultContracts.StartActivityForResult()
+        ) { result ->
+            if (result.resultCode == RESULT_OK) {
+                Log.d("MainActivity", "Activity result received")
+            }
+        }
         DB = SQLManager(this)
         setContent {
             Theme {
@@ -81,8 +95,8 @@ fun MainScreen() {
     var isPlaying by remember { mutableStateOf(false) }
     var isShowPlay by remember { mutableStateOf(false) }
     val bottomSheetState = rememberModalBottomSheetState(
-        skipPartiallyExpanded = true, // 跳过部分展开状态，直接全屏
-        confirmValueChange = { it != androidx.compose.material3.SheetValue.PartiallyExpanded }
+        skipPartiallyExpanded = false,
+        confirmValueChange = { it != androidx.compose.material3.SheetValue.Expanded }
     )
     val navItems = listOf(
         BottomNavigationItem(
