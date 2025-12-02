@@ -1,15 +1,11 @@
 package com.alimanab.player
 
 import android.content.Intent
-import com.alimanab.player.SQL
 import android.os.Bundle
-import android.util.Log
-import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.ActivityResultLauncher
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -47,8 +43,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.DialogProperties
 
 
 lateinit var startActivityLauncher: ActivityResultLauncher<Intent>
@@ -58,13 +52,6 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        startActivityLauncher = registerForActivityResult(
-            ActivityResultContracts.StartActivityForResult()
-        ) { result ->
-            if (result.resultCode == RESULT_OK) {
-                Log.d("MainActivity", "Activity result received")
-            }
-        }
         DB = SQLManager(this)
         setContent {
             Theme {
@@ -86,18 +73,22 @@ fun Theme(content: @Composable () -> Unit) {
     )
 }
 
+lateinit var SongsList : ListModel
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen() {
     val context = LocalContext.current
     var selectedItem by rememberSaveable {mutableStateOf(0)}
-    var isPlayed by remember { mutableStateOf(true) }
+    var isShowPlayCard by remember { mutableStateOf(true) }
     var isPlaying by remember { mutableStateOf(false) }
-    var isShowPlay by remember { mutableStateOf(false) }
+    var isShowPlaySheet by remember { mutableStateOf(false) }
+    var isOpenSongList by remember { mutableStateOf(false)}
+    var SonglistName by remember { mutableStateOf("") }
     val bottomSheetState = rememberModalBottomSheetState(
         skipPartiallyExpanded = false,
         confirmValueChange = { it != androidx.compose.material3.SheetValue.Expanded }
     )
+
     val navItems = listOf(
         BottomNavigationItem(
             title = stringResource(R.string.fetch),
@@ -107,7 +98,7 @@ fun MainScreen() {
         BottomNavigationItem(
             title = stringResource(R.string.home),
             icon = Icons.Default.Home,
-            content = { HomeContent() }
+            content = { HomeContent(){list -> SongsList = list ; isOpenSongList = true } }
         ),
         BottomNavigationItem(
             title = stringResource(R.string.config),
@@ -118,30 +109,32 @@ fun MainScreen() {
     Scaffold(
         bottomBar = {
             AnimatedVisibility(
-                visible = !isShowPlay,
+                visible = !isShowPlaySheet,
                 enter = fadeIn(tween(300)),
                 exit = fadeOut(tween(300))
             ){
                 Column(){
-                    if (isPlayed) {
+                    if (isShowPlayCard) {
                         NowPlayingCard(
                             isplay = isPlaying,
                             onPlayClick = {
                                 //TODO:
                             },
                             onCardClick = {
-                                isShowPlay = true
+                                isShowPlaySheet = true
                             }
                         )
                     }
-                    BottomAppBar {
-                        navItems.forEachIndexed { index, item ->
-                            NavigationBarItem(
-                                selected = selectedItem == index,
-                                onClick = { selectedItem = index },
-                                icon = { Icon(imageVector = item.icon, contentDescription = item.title) },
-                                label = { Text(text = item.title) }
-                            )
+                    if (!isOpenSongList){
+                        BottomAppBar {
+                            navItems.forEachIndexed { index, item ->
+                                NavigationBarItem(
+                                    selected = selectedItem == index,
+                                    onClick = { selectedItem = index },
+                                    icon = { Icon(imageVector = item.icon, contentDescription = item.title) },
+                                    label = { Text(text = item.title) }
+                                )
+                            }
                         }
                     }
                 }
@@ -159,21 +152,24 @@ fun MainScreen() {
             navItems[selectedItem].content()
         }
     }
-    if (isShowPlay) {
+    if (isShowPlaySheet) {
         ModalBottomSheet(
             sheetState = bottomSheetState,
             onDismissRequest = {
-                isShowPlay = false
+                isShowPlaySheet = false
             },
             modifier = Modifier.fillMaxSize(),
             scrimColor = Color.Black.copy(alpha = 0.5f),
         ) {
             MusicPlayerScreen(
                 onBack = {
-                    isShowPlay = false
+                    isShowPlaySheet = false
                 }
             )
         }
+    }
+    if (isOpenSongList) {
+        SongsListContent(SongsList){ isOpenSongList = false }
     }
 }
 

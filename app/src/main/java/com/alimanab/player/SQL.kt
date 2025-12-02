@@ -214,6 +214,41 @@ class SQLManager(context: Context) {
         }
     }
 
+    fun deletePlaylistById(userId: Int, playlistId: Int): Boolean {
+        val db = dbHelper.writableDatabase
+        return try {
+            // 验证歌单是否属于该用户
+            val cursor = db.query(
+                "playlists",
+                arrayOf("id"),
+                "id = ? AND user_id = ?",
+                arrayOf(playlistId.toString(), userId.toString()),
+                null, null, null
+            )
+
+            val exists = cursor.count > 0
+            cursor.close()
+
+            if (!exists) {
+                return false // 歌单不存在或不属于该用户
+            }
+
+            // 删除歌单（级联删除关联的歌曲关系）
+            val deletedRows = db.delete(
+                "playlists",
+                "id = ?",
+                arrayOf(playlistId.toString())
+            )
+
+            deletedRows > 0
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        } finally {
+            db.close()
+        }
+    }
+
     // ---------------------- 歌曲相关操作 ----------------------
     // 插入歌曲到数据库（路径重复时忽略，避免重复添加）
     fun insertSong(song: SongModel): Long {
@@ -399,4 +434,10 @@ data class SongModel(
     val path: String,          // 文件绝对路径（唯一标识）
     val fileName: String,      // 文件名（含后缀）
     val size: Long             // 文件大小（字节）
+)
+
+data class ListModel(
+    val name : String,
+    val id : Int,
+    val owner : Int
 )
