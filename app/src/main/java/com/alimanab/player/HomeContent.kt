@@ -86,7 +86,7 @@ fun HomeContent( onChangeBlank : (ListModel) -> Unit ) {
                     )
                 }
                 items(SongsLists.size) { index ->
-                    CardSongsList(SongsLists[index], onClick = {onChangeBlank(SongsLists[index])}, onConfig = { refreshTrigger++ })
+                    CardSongsList(SongsLists[index], onClick = {onChangeBlank(SongsLists[index ])}, onConfig = { refreshTrigger++ })
                 }
 
                 item{
