@@ -1,12 +1,5 @@
 package com.alimanab.player
 
-import android.app.Activity.RESULT_OK
-import android.content.Intent
-import android.util.Log
-import android.widget.ImageButton
-import android.widget.Toast
-import androidx.activity.ComponentActivity
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -28,6 +21,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -73,8 +67,15 @@ fun HomeContent( onChangeBlank : (ListModel) -> Unit ) {
         .padding(4.dp)
     ) {
         LoginCard(isLogin){ isLogin = true ; refreshTrigger++ }
-        AllCardSongsList({ onChangeBlank(ListModel(name = "All Songs",owner = 0,id = -1)) })
-
+        if (isLogin){
+            Row{
+                Box(Modifier.weight(1f)){DividedCardSongsList("All Songs",{ onChangeBlank(ListModel(name = "All Songs",owner = 0,id = -1)) })}
+                Box(Modifier.weight(1f)){DividedCardSongsList("Loved",{ onChangeBlank(ListModel(name = "Loved",owner = 0,id = -2)) })}
+            }
+        } else {
+            DividedCardSongsList("All Songs",{ onChangeBlank(ListModel(name = "All Songs",owner = 0,id = -1))})
+        }
+        Spacer(Modifier.height(6.dp))
         if (isLogin) {
             LazyColumn(verticalArrangement = Arrangement.spacedBy(1.dp)) {
                 val listNames = sqlManager.getUserPlaylists(UserID)
@@ -246,12 +247,12 @@ fun CardSongsList(listModel: ListModel, onClick: () -> Unit, onConfig: () -> Uni
 
 
 @Composable
-fun AllCardSongsList(onClick: () -> Unit)  {
+fun DividedCardSongsList(name : String, onClick: () -> Unit)  {
     Card(
         modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp)
+            .padding(8.dp)
             .clickable{ onClick() },
+            //.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(4.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
@@ -259,7 +260,6 @@ fun AllCardSongsList(onClick: () -> Unit)  {
     ) {
         Row(
             modifier = Modifier
-                .fillMaxWidth()
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -269,6 +269,7 @@ fun AllCardSongsList(onClick: () -> Unit)  {
                     .clip(shape = RectangleShape),
                 color = MaterialTheme.colorScheme.primaryContainer,
             ) {
+                if (name == "All Songs")
                 Icon(
                     painter = painterResource(R.drawable.ic_note_foreground),
                     contentDescription = "playlist",
@@ -277,13 +278,33 @@ fun AllCardSongsList(onClick: () -> Unit)  {
                         .padding(8.dp),
                     tint = MaterialTheme.colorScheme.onPrimaryContainer
                 )
+                else if(name == "Loved") {
+                    Icon(
+                        imageVector = Icons.Default.Favorite,
+                        contentDescription = "playlist",
+                        modifier = Modifier
+                            .size(26.dp)
+                            .padding(8.dp),
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                }
+                else {
+                    Icon(
+                        imageVector = Icons.Default.PlayArrow,
+                        contentDescription = "playlist",
+                        modifier = Modifier
+                            .size(16.dp)
+                            .padding(8.dp),
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                }
             }
             Column(
                 modifier = Modifier
                     .weight(3f)
                     .offset(x=20.dp),
             ) {
-                Text(text = "All Songs", fontSize = 20.sp)
+                Text(text = name, fontSize = 20.sp)
             }
         }
     }

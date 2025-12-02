@@ -24,6 +24,8 @@
             android:exported="false">
         </service>
 
+        <service android:name=".LightMusicService" android:enabled="true" android:exported="false" />
+
         <activity
             android:name=".MainActivity"
             android:exported="true"
