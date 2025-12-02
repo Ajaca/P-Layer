@@ -55,14 +55,19 @@ fun MusicPlayerScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(32.dp),
+            .padding(1.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(32.dp)
+        verticalArrangement = Arrangement.spacedBy(1.dp)
     ) {
         Text(
             modifier = Modifier.height(40.dp).fillMaxWidth(),
             text = "Song Sample",
             fontSize = 30.sp
+        )
+        Text(
+            modifier = Modifier.height(20.dp).fillMaxWidth(),
+            text = "Song Sample",
+            fontSize = 15.sp
         )
 
         Row(
@@ -122,7 +127,7 @@ fun MusicPlayerScreen(
 
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             Slider(
                 value = currentProgress,
@@ -182,6 +187,14 @@ fun MusicPlayerScreen(
 
             Spacer(modifier = Modifier.size(48.dp))
         }
+    }
+}
+
+@Preview
+@Composable
+fun MusicPlayerScreenPreview() {
+    Theme{
+        MusicPlayerScreen { }
     }
 }
 

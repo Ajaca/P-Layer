@@ -48,14 +48,13 @@ import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.filled.Menu
+import androidx.compose.runtime.tooling.parseSourceInformation
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SongsListContent(
-    list : ListModel,
-    onBackClick: () -> Unit = {},
-) {
+fun SongsListContent( list : ListModel, onBackClick: () -> Unit = {}, ) {
     val context = LocalContext.current
     var isPlay by remember { mutableStateOf(false) }
     var isPlayed by remember { mutableStateOf(true) }
@@ -82,7 +81,6 @@ fun SongsListContent(
                             maxLines = 2,
                             overflow = TextOverflow.Ellipsis
                         )
-                        // 显示歌曲数量
                         Text(
                             text = "${SongsInList.size} Songs",
                             style = MaterialTheme.typography.labelMedium,
@@ -163,20 +161,20 @@ private fun EmptyPlaylistContent(modifier: Modifier = Modifier) {
 fun SongCard(Song : SongModel, onClick: () -> Unit, onConfig: () -> Unit ) {
     val context = LocalContext.current
     var isConfirmDelete by remember { mutableStateOf(false) }
-    Card(
+    Surface(
         modifier = Modifier
             .fillMaxWidth()
             .padding(16.dp)
-            .clickable{ onClick() },
-        elevation = CardDefaults.cardElevation(4.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
+            .clickable{ onClick() }//,
+        //elevation = CardDefaults.cardElevation(4.dp),
+        //colors = CardDefaults.cardColors(
+        //    containerColor = MaterialTheme.colorScheme.surface
+       // ),
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(3.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Surface(
@@ -186,7 +184,7 @@ fun SongCard(Song : SongModel, onClick: () -> Unit, onConfig: () -> Unit ) {
                 color = MaterialTheme.colorScheme.primaryContainer,
             ) {
                 Icon(
-                    imageVector = Icons.Default.Favorite,
+                    painter = painterResource(R.drawable.ic_note_foreground),
                     contentDescription = "playlist",
                     modifier = Modifier
                         .size(16.dp)
@@ -203,7 +201,7 @@ fun SongCard(Song : SongModel, onClick: () -> Unit, onConfig: () -> Unit ) {
             }
             IconButton(modifier = Modifier.size(30.dp),onClick = { isConfirmDelete = true }) {
                 Icon(
-                    imageVector = Icons.Default.Clear,
+                    imageVector = Icons.Default.Menu,
                     modifier = Modifier.size(30.dp),
                     contentDescription = "Modifier",
                     tint = MaterialTheme.colorScheme.onTertiaryContainer

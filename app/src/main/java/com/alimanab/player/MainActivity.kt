@@ -12,11 +12,16 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredHeightIn
 import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Build
@@ -26,8 +31,10 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.ModalBottomSheetProperties
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -41,8 +48,11 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.SecureFlagPolicy
 
 
 lateinit var startActivityLauncher: ActivityResultLauncher<Intent>
@@ -86,7 +96,7 @@ fun MainScreen() {
     var SonglistName by remember { mutableStateOf("") }
     val bottomSheetState = rememberModalBottomSheetState(
         skipPartiallyExpanded = false,
-        confirmValueChange = { it != androidx.compose.material3.SheetValue.Expanded }
+        confirmValueChange = { it != SheetValue.Expanded }
     )
 
     val navItems = listOf(
@@ -136,6 +146,8 @@ fun MainScreen() {
                                 )
                             }
                         }
+                    } else {
+                        Spacer(Modifier.height(30.dp))
                     }
                 }
             }
@@ -149,16 +161,18 @@ fun MainScreen() {
                     bottom = innerPadding.calculateBottomPadding()
                 )
         ) {
-            navItems[selectedItem].content()
+            if (isOpenSongList) {
+                SongsListContent(SongsList){ isOpenSongList = false }
+            } else {
+                navItems[selectedItem].content()
+            }
         }
     }
     if (isShowPlaySheet) {
         ModalBottomSheet(
             sheetState = bottomSheetState,
-            onDismissRequest = {
-                isShowPlaySheet = false
-            },
-            modifier = Modifier.fillMaxSize(),
+            onDismissRequest = { isShowPlaySheet = false },
+            modifier = Modifier.fillMaxSize().wrapContentHeight(),
             scrimColor = Color.Black.copy(alpha = 0.5f),
         ) {
             MusicPlayerScreen(
@@ -167,9 +181,6 @@ fun MainScreen() {
                 }
             )
         }
-    }
-    if (isOpenSongList) {
-        SongsListContent(SongsList){ isOpenSongList = false }
     }
 }
 

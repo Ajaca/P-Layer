@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -69,7 +70,7 @@ fun HomeContent( onChangeBlank : (ListModel) -> Unit ) {
 
     Column(modifier = Modifier
         .fillMaxSize()
-        .padding(16.dp)
+        .padding(4.dp)
     ) {
         LoginCard(isLogin){ isLogin = true ; refreshTrigger++ }
         AllCardSongsList({ onChangeBlank(ListModel(name = "All Songs",owner = 0,id = -1)) })
@@ -190,7 +191,7 @@ fun CardSongsList(listModel: ListModel, onClick: () -> Unit, onConfig: () -> Uni
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(16.dp)
+            .padding(8.dp)
             .clickable{ onClick() },
         elevation = CardDefaults.cardElevation(4.dp),
         colors = CardDefaults.cardColors(
@@ -210,7 +211,7 @@ fun CardSongsList(listModel: ListModel, onClick: () -> Unit, onConfig: () -> Uni
                 color = MaterialTheme.colorScheme.primaryContainer,
             ) {
                 Icon(
-                    imageVector = Icons.Default.Favorite,
+                    imageVector = Icons.Default.Star,
                     contentDescription = "playlist",
                     modifier = Modifier
                         .size(16.dp)
@@ -295,7 +296,7 @@ fun AddCardSongsList(onFinish: () -> Unit)  {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(16.dp)
+            .padding(8.dp)
             .clickable{ isDialog = true },
         elevation = CardDefaults.cardElevation(4.dp),
         colors = CardDefaults.cardColors(
