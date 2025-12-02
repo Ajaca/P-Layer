@@ -163,17 +163,13 @@ fun MainScreen() {
         ModalBottomSheet(
             sheetState = bottomSheetState,
             onDismissRequest = {
-                // 点击遮罩或返回键，关闭播放页面（退栈）
                 isShowPlay = false
             },
-            // 关键：设置全屏样式，去掉默认圆角
             modifier = Modifier.fillMaxSize(),
             scrimColor = Color.Black.copy(alpha = 0.5f),
         ) {
-            // 播放页面内容（全屏）
             MusicPlayerScreen(
                 onBack = {
-                    // 点击播放页面的返回按钮，关闭页面
                     isShowPlay = false
                 }
             )
