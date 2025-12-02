@@ -513,9 +513,7 @@ private fun extractPathFromTreeUri(treeUri: Uri): String? {
     }
 }
 
-/**
- * 创建 SongModel 对象 - 根据 SQL 需求调整
- */
+
 private fun createSongFromFile(file: File): SongModel? {
     return try {
         // 使用 MediaMetadataRetriever 提取元数据（与 Config() 中的扫描逻辑配合）
@@ -526,7 +524,7 @@ private fun createSongFromFile(file: File): SongModel? {
             ?: file.nameWithoutExtension
 
         val artist = mediaMetadataRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_ARTIST)
-            ?: "未知艺术家"
+            ?: "V.A."
 
         val durationStr = mediaMetadataRetriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
         val duration = durationStr?.toIntOrNull() ?: 0
@@ -546,7 +544,7 @@ private fun createSongFromFile(file: File): SongModel? {
         // 即使无法读取元数据，也创建一个基本的 SongModel
         SongModel(
             title = file.nameWithoutExtension,
-            artist = "未知艺术家",
+            artist = "V.A.",
             duration = 0,
             path = file.absolutePath,
             fileName = file.name,
