@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.*
@@ -22,6 +23,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
+
 @Composable
 fun NowPlayingCard(isPlaying : Boolean,Song : SongModel,onCardClick: () -> Unit,onPlayClick : () -> Unit, onNextClick: () -> Unit) {
     Card(
@@ -34,61 +38,80 @@ fun NowPlayingCard(isPlaying : Boolean,Song : SongModel,onCardClick: () -> Unit,
         ),
         onClick = onCardClick
     ) {
-        Box(
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
-            contentAlignment = Alignment.CenterStart
+            verticalAlignment = Alignment.CenterVertically
         ) {
+            // 左侧：音符图标
+            Icon(
+                painter = painterResource(R.drawable.ic_note_foreground),
+                contentDescription = "Now Playing",
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(36.dp)
+            )
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            // 中间：歌曲信息（占据剩余空间）
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(
+                    text = Song.artist,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = Song.title,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            // 右侧：播放控制按钮
             Row(
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Box(Modifier.size(56.dp)){
-                    Icon(
-                        painter = painterResource(R.drawable.ic_note_foreground),
-                        contentDescription = "Now Playing",
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(end = 4.dp)
-                    )
-                }
-                Column {
-                    Text(
-                        text = "is Playing",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = "Song Sample",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-
-                Spacer(modifier = Modifier.weight(1f))
-
-                IconButton(onClick = { onPlayClick() }) {
-                    if (isPlaying) {
+                IconButton(onClick = onPlayClick) {
+                    if (!isPlaying) {
                         Icon(
                             imageVector = Icons.Default.PlayArrow,
                             contentDescription = "Play",
-                            tint = LocalContentColor.current
+                            tint = MaterialTheme.colorScheme.primary
                         )
                     } else {
                         Icon(
                             painter = painterResource(R.drawable.ic_pause),
                             contentDescription = "Pause",
-                            tint = LocalContentColor.current
+                            tint = MaterialTheme.colorScheme.primary
                         )
                     }
                 }
-                IconButton(onClick = { onNextClick() }) {
+
+                IconButton(onClick = onNextClick) {
                     Icon(
                         imageVector = Icons.Default.KeyboardArrowRight,
                         contentDescription = "Next",
-                        tint = LocalContentColor.current
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
         }
+    }
+}
+
+@Preview
+@Composable
+fun SongCardPreview(){
+    Theme{
+        NowPlayingCard(true,SongModel(-1,"Sample name","Sample Artist",0,"","",0),{},{},{})
     }
 }

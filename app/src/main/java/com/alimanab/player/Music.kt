@@ -14,6 +14,8 @@ import android.widget.Toast
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Job
@@ -33,6 +35,7 @@ fun simplePlay(filePath: String) {
 }
 
 class LightMusicService : Service() {
+
     private var mediaPlayer: MediaPlayer? = null
     private val binder = LocalBinder()
     private var currentSongPath: String? = null
@@ -43,15 +46,20 @@ class LightMusicService : Service() {
 
     companion object {
         var instance: LightMusicService? = null
+        val instanceLiveData = MutableLiveData<LightMusicService?>()
     }
 
     override fun onBind(intent: Intent): IBinder = binder
 
     override fun onCreate() {
         super.onCreate()
+        Log.e("MusicPlayer", "!!!!!!!!!! LightMusicService onCreate CALLED !!!!!!!!!!")
         instance = this
         mediaPlayer = MediaPlayer()
         setupMediaPlayer()
+
+        instanceLiveData.value = null
+        instanceLiveData.value = this
     }
 
     private fun setupMediaPlayer() {
@@ -69,20 +77,17 @@ class LightMusicService : Service() {
 
     fun play(songPath: String) {
         try {
-            currentSongPath = songPath
-            mediaPlayer?.reset()
-            mediaPlayer?.setDataSource(songPath)
+            Log.d("MusicPlayer", "LightMusicService.play() called with: $songPath")
 
-            // 用异步准备避免阻塞
-            mediaPlayer?.prepareAsync()
+            mediaPlayer?.reset()  // 重置MediaPlayer
 
-            // 设置准备完成的监听
-            mediaPlayer?.setOnPreparedListener { mp ->
-                mp.start()
-            }
+            mediaPlayer?.setDataSource(songPath)  // 设置音频文件路径
+            mediaPlayer?.prepare()  // 或者使用 prepareAsync()，但要注意异步
 
+            mediaPlayer?.start()  // 开始播放
+            Log.d("MusicPlayer", "✅ MediaPlayer Started!")
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e("MusicPlayer", "❌ Failed to play audio: ${e.message}", e)
         }
     }
 
@@ -126,23 +131,50 @@ class PlayerManager(private val context: Context) {
 
         context.startService(intent)
     }
+    private var pendingPlayPath: String? = null
+
+    // 🎯 用于防止重复启动 Service
+    private var hasStartedService = false
 
     fun play(songPath: String) {
-        Log.d("MusicPlayer", "Using static instance: ${LightMusicService.instance}")
+        Log.d("MusicPlayer", "play() called with path: $songPath")
 
-        // 确保 Service 已创建
-        if (LightMusicService.instance == null) {
-            Log.d("MusicPlayer", "Service instance is null, starting service...")
-            val intent = Intent(context, LightMusicService::class.java)
-            context.startService(intent)
-
-            // 等待 Service 创建
-            Thread.sleep(200)
+        if (LightMusicService.instance != null) {
+            Log.d("MusicPlayer", "✅ Service already exists, playing directly")
+            LightMusicService.instance?.play(songPath)
+            return
         }
 
-        // 直接调用 Service 的 play 方法
-        LightMusicService.instance?.play(songPath)
-            ?: Log.e("MusicPlayer", "Service instance still NULL after startService!")
+        if (!hasStartedService) {
+            Log.d("MusicPlayer", "🚀 Starting LightMusicService for the first time")
+            val intent = Intent(context, LightMusicService::class.java)
+            context.startService(intent)
+            hasStartedService = true
+        }
+
+        pendingPlayPath = songPath
+
+        // 🎯 先尝试直接播放（可能 Service 已经创建但 LiveData 没通知）
+        if (LightMusicService.instance != null) {
+            Log.d("MusicPlayer", "✅ Instance already available, playing immediately")
+            LightMusicService.instance?.play(songPath)
+            pendingPlayPath = null
+            return
+        }
+
+        // 🎯 否则观察 LiveData
+        LightMusicService.instanceLiveData.observeForever(object : Observer<LightMusicService?> {
+            override fun onChanged(service: LightMusicService?) {
+                if (service != null) {
+                    Log.d("MusicPlayer", "✅ Observed Service is ready, playing pending song")
+                    pendingPlayPath?.let { path ->
+                        service.play(path)
+                        pendingPlayPath = null
+                    }
+                    LightMusicService.instanceLiveData.removeObserver(this)
+                }
+            }
+        })
     }
 
     fun pause() = musicService?.pause()
@@ -230,6 +262,11 @@ class LightPlayerViewModel : ViewModel() {
         } else {
             Log.d("MusicPlayer", "Calling playCurrent")
             playCurrent()  // 这里调用 playCurrent()
+        }
+    }
+    fun togglePlayPauseTo(isPlay : Boolean){
+        if (isPlaying != isPlay){
+            togglePlayPause()
         }
     }
 

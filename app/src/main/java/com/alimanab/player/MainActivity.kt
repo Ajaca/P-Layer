@@ -102,7 +102,7 @@ fun MainScreen() {
         skipPartiallyExpanded = false,
         confirmValueChange = { it != SheetValue.Expanded }
     )
-    var currentPlaylist by remember { mutableStateOf(emptyList<SongModel>()) }
+
     var currentSongIndex by remember { mutableStateOf(-1) }
     var currentPosition by remember { mutableStateOf(0) }
     var currentSongDuration by remember { mutableStateOf(0) }
@@ -113,29 +113,18 @@ fun MainScreen() {
     // 初始化播放器 ViewModel
     val viewModel = remember { LightPlayerViewModel() }
 
-    // 初始化播放器
-    //LaunchedEffect(Unit) {
-    //    viewModel.initializeWithPlaylist(context, emptyList())
-    //}
-
     // 观察播放器状态变化
     val isCurrentlyPlaying by remember { derivedStateOf { viewModel.isPlaying } }
     val currentSong = viewModel.getCurrentSong()
-    //val isDurationLoaded by remember { derivedStateOf { viewModel.durationLoaded } }
 
     // 更新本地状态
-    LaunchedEffect(isCurrentlyPlaying) {
-        isPlaying = isCurrentlyPlaying
-        //Toast.makeText(context,"0", Toast.LENGTH_SHORT).show()
-    }
+    LaunchedEffect(isCurrentlyPlaying) { isPlaying = isCurrentlyPlaying }
 
     LaunchedEffect(currentSong) {
         currentSong?.let {
             isShowPlayCard = true
-            //Toast.makeText(context,"1", Toast.LENGTH_SHORT).show()
         }
     }
-
 
     val navItems = listOf(
         BottomNavigationItem(
@@ -173,13 +162,15 @@ fun MainScreen() {
                             isPlaying = isPlaying,
                             Song = currentSong as SongModel,
                             onPlayClick = {
-                                viewModel.togglePlayPause()
                                 isPlaying = !isPlaying
+                                viewModel.togglePlayPauseTo(isPlaying)
                             },
                             onCardClick = {
                                 isShowPlaySheet = true
                             },
-                            onNextClick = {}
+                            onNextClick = {
+                                viewModel.playNext()
+                            }
                         )
                     }
                     if (!isOpenSongList){
@@ -214,24 +205,10 @@ fun MainScreen() {
                     onBackClick = { isOpenSongList = false },
                     onPlay = {list,song -> //list = List<SongModel>, song = SongModel
 
+                        viewModel.init(context, list, song)
+                        viewModel.togglePlayPause()
+                        isPlaying = true
 
-                        try {
-                            val mp = MediaPlayer()
-                            mp.setDataSource(song.path)
-                            mp.prepare()
-                            mp.start()
-                            mp.setOnCompletionListener { mp.release() }
-                            Toast.makeText(context, "Playing: ${song.title}", Toast.LENGTH_SHORT).show()
-                        } catch (e: Exception) {
-                            Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
-                        }
-
-
-                        //viewModel.init(context, list, song)
-                        //viewModel.togglePlayPause()
-
-                        //simplePlay(song.path)
-                        //Toast.makeText(context,"Song : ${song.title}",Toast.LENGTH_SHORT).show()
                     }
                 )
             } else {
