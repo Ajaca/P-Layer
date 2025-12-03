@@ -1,7 +1,9 @@
 package com.alimanab.player
 
 import android.content.Intent
+import android.media.MediaPlayer
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -39,6 +41,8 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -83,21 +87,55 @@ fun Theme(content: @Composable () -> Unit) {
     )
 }
 
-lateinit var SongsList : ListModel
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen() {
     val context = LocalContext.current
     var selectedItem by rememberSaveable {mutableStateOf(0)}
-    var isShowPlayCard by remember { mutableStateOf(true) }
+    var isShowPlayCard by remember { mutableStateOf(false) }
     var isPlaying by remember { mutableStateOf(false) }
     var isShowPlaySheet by remember { mutableStateOf(false) }
     var isOpenSongList by remember { mutableStateOf(false)}
-    var SonglistName by remember { mutableStateOf("") }
+    var SongsListStatus by remember { mutableStateOf<ListModel?>(null) }
+    val sqlManager = remember { SQLManager(context) }
     val bottomSheetState = rememberModalBottomSheetState(
         skipPartiallyExpanded = false,
         confirmValueChange = { it != SheetValue.Expanded }
     )
+    var currentPlaylist by remember { mutableStateOf(emptyList<SongModel>()) }
+    var currentSongIndex by remember { mutableStateOf(-1) }
+    var currentPosition by remember { mutableStateOf(0) }
+    var currentSongDuration by remember { mutableStateOf(0) }
+
+    // 播放列表数据
+    var SongsList by remember { mutableStateOf(emptyList<SongModel>()) }
+
+    // 初始化播放器 ViewModel
+    val viewModel = remember { LightPlayerViewModel() }
+
+    // 初始化播放器
+    //LaunchedEffect(Unit) {
+    //    viewModel.initializeWithPlaylist(context, emptyList())
+    //}
+
+    // 观察播放器状态变化
+    val isCurrentlyPlaying by remember { derivedStateOf { viewModel.isPlaying } }
+    val currentSong = viewModel.getCurrentSong()
+    //val isDurationLoaded by remember { derivedStateOf { viewModel.durationLoaded } }
+
+    // 更新本地状态
+    LaunchedEffect(isCurrentlyPlaying) {
+        isPlaying = isCurrentlyPlaying
+        //Toast.makeText(context,"0", Toast.LENGTH_SHORT).show()
+    }
+
+    LaunchedEffect(currentSong) {
+        currentSong?.let {
+            isShowPlayCard = true
+            //Toast.makeText(context,"1", Toast.LENGTH_SHORT).show()
+        }
+    }
+
 
     val navItems = listOf(
         BottomNavigationItem(
@@ -108,7 +146,13 @@ fun MainScreen() {
         BottomNavigationItem(
             title = stringResource(R.string.home),
             icon = Icons.Default.Home,
-            content = { HomeContent(){list -> SongsList = list ; isOpenSongList = true } }
+            content = {
+                HomeContent(){
+                    list -> SongsListStatus = list
+                    SongsList = sqlManager.getPlaylistSongs(list.id)
+                    isOpenSongList = true
+                }
+            }
         ),
         BottomNavigationItem(
             title = stringResource(R.string.config),
@@ -126,13 +170,16 @@ fun MainScreen() {
                 Column(){
                     if (isShowPlayCard) {
                         NowPlayingCard(
-                            isplay = isPlaying,
+                            isPlaying = isPlaying,
+                            Song = currentSong as SongModel,
                             onPlayClick = {
-                                //TODO:
+                                viewModel.togglePlayPause()
+                                isPlaying = !isPlaying
                             },
                             onCardClick = {
                                 isShowPlaySheet = true
-                            }
+                            },
+                            onNextClick = {}
                         )
                     }
                     if (!isOpenSongList){
@@ -162,7 +209,31 @@ fun MainScreen() {
                 )
         ) {
             if (isOpenSongList) {
-                SongsListContent(SongsList){ isOpenSongList = false }
+                SongsListContent(
+                    SongsListStatus as ListModel,
+                    onBackClick = { isOpenSongList = false },
+                    onPlay = {list,song -> //list = List<SongModel>, song = SongModel
+
+
+                        try {
+                            val mp = MediaPlayer()
+                            mp.setDataSource(song.path)
+                            mp.prepare()
+                            mp.start()
+                            mp.setOnCompletionListener { mp.release() }
+                            Toast.makeText(context, "Playing: ${song.title}", Toast.LENGTH_SHORT).show()
+                        } catch (e: Exception) {
+                            Toast.makeText(context, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
+                        }
+
+
+                        //viewModel.init(context, list, song)
+                        //viewModel.togglePlayPause()
+
+                        //simplePlay(song.path)
+                        //Toast.makeText(context,"Song : ${song.title}",Toast.LENGTH_SHORT).show()
+                    }
+                )
             } else {
                 navItems[selectedItem].content()
             }

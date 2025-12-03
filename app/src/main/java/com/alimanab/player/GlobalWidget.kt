@@ -1,62 +1,29 @@
 package com.alimanab.player
 
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.wrapContentHeight
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
-import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.runtime.getValue
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation
-import androidx.compose.ui.unit.sp
-
+import androidx.compose.ui.res.painterResource
 @Composable
-fun singleButton(modifier: Modifier,text : String,onClick : () -> Unit) {
-    Button(modifier = modifier,onClick = onClick as () -> Unit){
-        Text(text)
-    }
-}
-
-@Composable
-fun NowPlayingCard(isplay : Boolean,onCardClick: () -> Unit,onPlayClick : (Boolean) -> Unit) {
-    var isPlaying by remember { mutableStateOf(isplay) }
+fun NowPlayingCard(isPlaying : Boolean,Song : SongModel,onCardClick: () -> Unit,onPlayClick : () -> Unit, onNextClick: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -76,13 +43,14 @@ fun NowPlayingCard(isplay : Boolean,onCardClick: () -> Unit,onPlayClick : (Boole
             Row(
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
-                    imageVector = Icons.Default.Home,
-                    contentDescription = "Now Playing",
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(end = 12.dp)
-                )
-
+                Box(Modifier.size(56.dp)){
+                    Icon(
+                        painter = painterResource(R.drawable.ic_note_foreground),
+                        contentDescription = "Now Playing",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(end = 4.dp)
+                    )
+                }
                 Column {
                     Text(
                         text = "is Playing",
@@ -98,10 +66,26 @@ fun NowPlayingCard(isplay : Boolean,onCardClick: () -> Unit,onPlayClick : (Boole
 
                 Spacer(modifier = Modifier.weight(1f))
 
-                IconButton(onClick = { onPlayClick(isPlaying) }) {
-                    Text(
-                        text = if (isPlaying) "⏸" else "▶",
-                        fontSize = 24.sp
+                IconButton(onClick = { onPlayClick() }) {
+                    if (isPlaying) {
+                        Icon(
+                            imageVector = Icons.Default.PlayArrow,
+                            contentDescription = "Play",
+                            tint = LocalContentColor.current
+                        )
+                    } else {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_pause),
+                            contentDescription = "Pause",
+                            tint = LocalContentColor.current
+                        )
+                    }
+                }
+                IconButton(onClick = { onNextClick() }) {
+                    Icon(
+                        imageVector = Icons.Default.KeyboardArrowRight,
+                        contentDescription = "Next",
+                        tint = LocalContentColor.current
                     )
                 }
             }

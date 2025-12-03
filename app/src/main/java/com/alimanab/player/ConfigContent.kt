@@ -466,9 +466,7 @@ private fun importSongsFromPath(context: Context) {
     }
 }
 
-/**
- * 与 Config() 中相同的目录遍历函数 - 重命名避免冲突
- */
+//与 Config() 中相同的目录遍历函数 - 重命名避免冲突
 private fun traverseDirForImport(dir: File, result: MutableList<File>) {
     dir.listFiles()?.forEach { file ->
         if (file.isDirectory) {
@@ -479,9 +477,7 @@ private fun traverseDirForImport(dir: File, result: MutableList<File>) {
     }
 }
 
-/**
- * 与 Config() 中完全相同的音频文件判断函数
- */
+//与 Config() 中完全相同的音频文件判断函数
 private fun isAudioFile(name: String): Boolean {
     val n = name.lowercase()
     return n.endsWith(".mp3") || n.endsWith(".flac") || n.endsWith(".wav") ||
@@ -489,9 +485,7 @@ private fun isAudioFile(name: String): Boolean {
             n.endsWith(".wma") || n.endsWith(".ape")
 }
 
-/**
- * 从 TreeUri 提取路径 - 与 Config() 中完全相同
- */
+//从 TreeUri 提取路径 - 与 Config() 中完全相同
 private fun extractPathFromTreeUri(treeUri: Uri): String? {
     return try {
         val docId = DocumentsContract.getTreeDocumentId(treeUri)

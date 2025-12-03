@@ -54,7 +54,7 @@ import androidx.compose.runtime.tooling.parseSourceInformation
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SongsListContent( list : ListModel, onBackClick: () -> Unit = {}, ) {
+fun SongsListContent( list : ListModel, onBackClick: () -> Unit = {}, onPlay: (List<SongModel>,SongModel) -> Unit) {
     val context = LocalContext.current
     var isPlay by remember { mutableStateOf(false) }
     var isPlayed by remember { mutableStateOf(true) }
@@ -115,7 +115,13 @@ fun SongsListContent( list : ListModel, onBackClick: () -> Unit = {}, ) {
                     verticalArrangement = Arrangement.spacedBy(1.dp)
                 ) {
                     items(SongsInList.size) { index ->
-                        SongCard(Song = SongsInList[index], onConfig = {}, onClick = {})
+                        SongCard(
+                            Song = SongsInList[index],
+                            onConfig = {},
+                            onClick = {
+                                onPlay(SongsInList,SongsInList[index])
+                            }
+                        )
                     }
                 }
             }
@@ -165,11 +171,7 @@ fun SongCard(Song : SongModel, onClick: () -> Unit, onConfig: () -> Unit ) {
         modifier = Modifier
             .fillMaxWidth()
             .padding(16.dp)
-            .clickable{ onClick() }//,
-        //elevation = CardDefaults.cardElevation(4.dp),
-        //colors = CardDefaults.cardColors(
-        //    containerColor = MaterialTheme.colorScheme.surface
-       // ),
+            .clickable{ onClick() }
     ) {
         Row(
             modifier = Modifier
