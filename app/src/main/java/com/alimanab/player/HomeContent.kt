@@ -81,7 +81,8 @@ fun HomeContent( onChangeBlank : (ListModel) -> Unit ) {
         Spacer(Modifier.height(6.dp))
         if (isLogin) {
             LazyColumn(verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                val listNames = sqlManager.getUserPlaylists(UserID)
+                val listNames = sqlManager.getUserPlaylists(UserID).toMutableList()
+                listNames.remove("${UserName}'s Loved")
                 val SongsLists = listNames.map { playlistName ->
                     val playlistId = sqlManager.getPlaylistIdByName(UserID, playlistName)
                     ListModel(
