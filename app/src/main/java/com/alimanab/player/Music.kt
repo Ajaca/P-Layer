@@ -1,4 +1,5 @@
 package com.alimanab.player
+import android.annotation.SuppressLint
 import android.app.Service
 import android.content.ComponentName
 import android.content.Context
@@ -11,17 +12,18 @@ import android.os.Binder
 import android.os.IBinder
 import android.util.Log
 import android.widget.Toast
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import java.io.File
 import kotlin.random.Random
 
 
@@ -38,7 +40,25 @@ class LightMusicService : Service() {
 
     private var mediaPlayer: MediaPlayer? = null
     private val binder = LocalBinder()
-    private var currentSongPath: String? = null
+
+    // 播放状态
+    private var playlist = mutableListOf<SongModel>()
+    private var currentIndex = -1
+    private var playMode = PlayMode.SEQUENTIAL
+
+    enum class PlayMode { SEQUENTIAL, RANDOM, SINGLE_LOOP }
+
+    // 暴露给外部的 LiveData（可选）
+    private val _currentSongLiveData = MutableLiveData<SongModel?>()
+    val currentSongLiveData: LiveData<SongModel?> get() = _currentSongLiveData
+
+    private val _isPlayingLiveData = MutableLiveData<Boolean>()
+    val isPlayingLiveData: LiveData<Boolean> get() = _isPlayingLiveData
+
+    private val _progressLiveData = MutableLiveData<Pair<Int, Int>>() // current, duration
+    val progressLiveData: LiveData<Pair<Int, Int>> get() = _progressLiveData
+
+    private var progressJob: Job? = null
 
     inner class LocalBinder : Binder() {
         fun getService() = this@LightMusicService
@@ -49,17 +69,15 @@ class LightMusicService : Service() {
         val instanceLiveData = MutableLiveData<LightMusicService?>()
     }
 
-    override fun onBind(intent: Intent): IBinder = binder
-
     override fun onCreate() {
         super.onCreate()
-        Log.e("MusicPlayer", "!!!!!!!!!! LightMusicService onCreate CALLED !!!!!!!!!!")
+        Log.e("MusicPlayer", "LightMusicService onCreate CALLED")
         instance = this
         mediaPlayer = MediaPlayer()
         setupMediaPlayer()
+        instanceLiveData.postValue(this)
 
-        instanceLiveData.value = null
-        instanceLiveData.value = this
+        startProgressUpdater()
     }
 
     private fun setupMediaPlayer() {
@@ -71,49 +89,157 @@ class LightMusicService : Service() {
         )
 
         mediaPlayer?.setOnCompletionListener {
-            sendBroadcast(Intent("PLAYBACK_COMPLETED"))
+            handlePlaybackCompleted()
+        }
+
+        mediaPlayer?.setOnPreparedListener {
+            mediaPlayer?.start()
+            _isPlayingLiveData.postValue(true)
         }
     }
 
-    fun play(songPath: String) {
+    private fun startProgressUpdater() {
+        progressJob?.cancel()
+        progressJob = CoroutineScope(Dispatchers.IO).launch {
+            while (true) {
+                if (mediaPlayer?.isPlaying == true && mediaPlayer?.duration ?: 0 > 0) {
+                    val pos = mediaPlayer?.currentPosition ?: 0
+                    val dur = mediaPlayer?.duration ?: 0
+                    _progressLiveData.postValue(pos to dur)
+                }
+                delay(500)
+            }
+        }
+    }
+
+    // ========== 对外提供的控制方法 ==========
+
+    fun setPlaylist(list: List<SongModel>, startIndex: Int = 0, mode: PlayMode = PlayMode.SEQUENTIAL) {
+        playlist = list.toMutableList()
+        currentIndex = startIndex.coerceIn(0, list.size - 1)
+        playMode = mode
+        playCurrent()
+    }
+
+    fun playCurrent() {
+        val song = getCurrentSong() ?: return
         try {
-            Log.d("MusicPlayer", "LightMusicService.play() called with: $songPath")
-
-            mediaPlayer?.reset()  // 重置MediaPlayer
-
-            mediaPlayer?.setDataSource(songPath)  // 设置音频文件路径
-            mediaPlayer?.prepare()  // 或者使用 prepareAsync()，但要注意异步
-
-            mediaPlayer?.start()  // 开始播放
-            Log.d("MusicPlayer", "✅ MediaPlayer Started!")
+            mediaPlayer?.reset()
+            mediaPlayer?.setDataSource(song.path)
+            mediaPlayer?.prepareAsync() // 异步准备，避免阻塞主线程
+            _currentSongLiveData.postValue(song)
         } catch (e: Exception) {
-            Log.e("MusicPlayer", "❌ Failed to play audio: ${e.message}", e)
+            Log.e("MusicPlayer", "Play failed: ${e.message}", e)
         }
     }
 
-    fun pause() = mediaPlayer?.pause()
-    fun resume() = mediaPlayer?.start()
-    fun stop() = mediaPlayer?.stop()
-    fun seekTo(position: Int) = mediaPlayer?.seekTo(position)
+    fun playNext() {
+        if (playlist.isEmpty()) return
+        val nextIndex = when (playMode) {
+            PlayMode.SEQUENTIAL -> (currentIndex + 1) % playlist.size
+            PlayMode.RANDOM -> Random.nextInt(playlist.size)
+            PlayMode.SINGLE_LOOP -> currentIndex
+        }
+        playSongAtIndex(nextIndex)
+    }
+
+    fun playPrevious() {
+        if (playlist.isEmpty()) return
+        val prevIndex = when (playMode) {
+            PlayMode.SEQUENTIAL -> if (currentIndex > 0) currentIndex - 1 else playlist.size - 1
+            PlayMode.RANDOM -> Random.nextInt(playlist.size)
+            PlayMode.SINGLE_LOOP -> currentIndex
+        }
+        playSongAtIndex(prevIndex)
+    }
+
+    fun playSongAtIndex(index: Int) {
+        if (index in playlist.indices) {
+            currentIndex = index
+            playCurrent()
+        }
+    }
+
+    fun pause() {
+        if (mediaPlayer?.isPlaying == true) {
+            mediaPlayer?.pause()
+            _isPlayingLiveData.postValue(false)
+        }
+    }
+
+    fun resume() {
+        if (mediaPlayer?.isPlaying == false && (mediaPlayer?.currentPosition
+                ?: 0) < (mediaPlayer?.duration ?: 0)
+        ) {
+            mediaPlayer?.start()
+            _isPlayingLiveData.postValue(true)
+        } else if (!mediaPlayer?.isPlaying!! && playlist.isNotEmpty()) {
+            playCurrent()
+        }
+    }
+
+    fun stop() {
+        mediaPlayer?.stop()
+        _isPlayingLiveData.postValue(false)
+    }
+
+    fun seekTo(position: Int) {
+        mediaPlayer?.seekTo(position)
+        _progressLiveData.postValue(position to (mediaPlayer?.duration ?: 0))
+    }
+
     fun isPlaying() = mediaPlayer?.isPlaying ?: false
     fun getCurrentPosition() = mediaPlayer?.currentPosition ?: 0
     fun getDuration() = mediaPlayer?.duration ?: 0
+    fun getCurrentSong() = playlist.getOrNull(currentIndex)
+
+    private fun handlePlaybackCompleted() {
+        when (playMode) {
+            PlayMode.SEQUENTIAL, PlayMode.RANDOM -> playNext()
+            PlayMode.SINGLE_LOOP -> {
+                mediaPlayer?.seekTo(0)
+                mediaPlayer?.start()
+                _isPlayingLiveData.postValue(true)
+            }
+        }
+    }
+
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        // 设置为前台服务（推荐用于音乐播放）
+        // startForeground(NOTIFICATION_ID, buildNotification())
+        return START_STICKY // 被杀死后尽量重启
+    }
+
+    override fun onBind(intent: Intent): IBinder = binder
 
     override fun onDestroy() {
         super.onDestroy()
         mediaPlayer?.release()
         mediaPlayer = null
+        progressJob?.cancel()
         instance = null
+        instanceLiveData.postValue(null)
     }
 }
 
-class PlayerManager(private val context: Context) {
+@SuppressLint("StaticFieldLeak")
+object PlayerManager {
     private var musicService: LightMusicService? = null
     private var isBound = false
+    private lateinit var context: Context
+    private var isInitialized = false
+
+    fun init(context: Context) {
+        if (isInitialized) return
+        this.context = context.applicationContext
+        isInitialized = true
+    }
+
     private val connection = object : ServiceConnection {
         override fun onServiceConnected(className: ComponentName, service: IBinder) {
-            //musicService = (service as LightMusicService.LocalBinder).getService()
-            musicService = service.javaClass.getMethod("getService").invoke(service) as LightMusicService
+            val binder = service as LightMusicService.LocalBinder
+            musicService = binder.getService()
             isBound = true
         }
 
@@ -123,60 +249,25 @@ class PlayerManager(private val context: Context) {
         }
     }
 
-    fun bindService() {
-        Log.d("MusicPlayer", "startService() called")
-        val intent = Intent(context, LightMusicService::class.java)
-        val bindResult = context.bindService(intent, connection, Context.BIND_AUTO_CREATE)
-        Log.d("MusicPlayer", "bindService result: $bindResult")
-
-        context.startService(intent)
-    }
-    private var pendingPlayPath: String? = null
-
-    // 🎯 用于防止重复启动 Service
-    private var hasStartedService = false
-
-    fun play(songPath: String) {
-        Log.d("MusicPlayer", "play() called with path: $songPath")
-
-        if (LightMusicService.instance != null) {
-            Log.d("MusicPlayer", "✅ Service already exists, playing directly")
-            LightMusicService.instance?.play(songPath)
-            return
-        }
-
-        if (!hasStartedService) {
-            Log.d("MusicPlayer", "🚀 Starting LightMusicService for the first time")
+    fun bind() {
+        if (!isBound) {
+            // 此时 context 已通过 init 初始化，可安全使用
             val intent = Intent(context, LightMusicService::class.java)
-            context.startService(intent)
-            hasStartedService = true
+            val bindResult = context.bindService(intent, connection, Context.BIND_AUTO_CREATE)
+            Log.d("MusicPlayer", "bindService 返回值: $bindResult") // 验证绑定是否发起成功
+        } else {
+            Log.d("MusicPlayer", "已经绑定过了")
         }
-
-        pendingPlayPath = songPath
-
-        // 🎯 先尝试直接播放（可能 Service 已经创建但 LiveData 没通知）
-        if (LightMusicService.instance != null) {
-            Log.d("MusicPlayer", "✅ Instance already available, playing immediately")
-            LightMusicService.instance?.play(songPath)
-            pendingPlayPath = null
-            return
-        }
-
-        // 🎯 否则观察 LiveData
-        LightMusicService.instanceLiveData.observeForever(object : Observer<LightMusicService?> {
-            override fun onChanged(service: LightMusicService?) {
-                if (service != null) {
-                    Log.d("MusicPlayer", "✅ Observed Service is ready, playing pending song")
-                    pendingPlayPath?.let { path ->
-                        service.play(path)
-                        pendingPlayPath = null
-                    }
-                    LightMusicService.instanceLiveData.removeObserver(this)
-                }
-            }
-        })
     }
 
+    fun setPlaylist(list: List<SongModel>, startIndex: Int = 0, mode: LightMusicService.PlayMode = LightMusicService.PlayMode.SEQUENTIAL) {
+        musicService?.setPlaylist(list, startIndex, mode)
+        //Toast.makeText(context,"Initialized? $musicService", Toast.LENGTH_SHORT).show()
+    }
+
+    fun playNext() = musicService?.playNext()
+    fun playPrevious() = musicService?.playPrevious()
+    fun playSongAtIndex(index: Int) = musicService?.playSongAtIndex(index)
     fun pause() = musicService?.pause()
     fun resume() = musicService?.resume()
     fun stop() = musicService?.stop()
@@ -184,20 +275,13 @@ class PlayerManager(private val context: Context) {
     fun isPlaying() = musicService?.isPlaying() ?: false
     fun getCurrentPosition() = musicService?.getCurrentPosition() ?: 0
     fun getDuration() = musicService?.getDuration() ?: 0
-
-    fun unbind() {
-        if (isBound) {
-            context.unbindService(connection)
-            isBound = false
-        }
-    }
+    fun getCurrentSong() = musicService?.getCurrentSong()
 }
 
 class LightPlayerViewModel : ViewModel() {
-    private var playerManager: PlayerManager? = null
+
     private var progressJob: Job? = null
 
-    // 状态
     var currentPlaylist by mutableStateOf(emptyList<SongModel>())
     var currentSongIndex by mutableStateOf(-1)
     var isPlaying by mutableStateOf(false)
@@ -205,99 +289,77 @@ class LightPlayerViewModel : ViewModel() {
     var currentSongDuration by mutableStateOf(0)
 
     enum class PlayMode { SEQUENTIAL, RANDOM, SINGLE_LOOP }
-    var playMode by mutableStateOf(PlayMode.SEQUENTIAL)
+    var playModes by mutableStateOf(PlayMode.SEQUENTIAL)
 
-    fun init(context: Context, playlist: List<SongModel>, startSong: SongModel? = null) {
-        playerManager = PlayerManager(context.applicationContext)
-        currentPlaylist = playlist
+    // 监听 Service 状态
+    private val service = LightMusicService.instanceLiveData
 
-        startSong?.let { song ->
-            currentSongIndex = playlist.indexOfFirst { it.path == song.path }.takeIf { it >= 0 }
-                ?: run {
-                    currentPlaylist = listOf(song) + playlist
-                    0
-                }
-        } ?: run {
-            if (playlist.isNotEmpty()) currentSongIndex = 0
-        }
-
-        startProgressUpdate()
+    init {
+        observeService()
     }
 
-    private fun startProgressUpdate() {
-        progressJob?.cancel()
-        progressJob = viewModelScope.launch {
-            while (true) {
-                if (isPlaying) {
-                    currentPosition = playerManager?.getCurrentPosition() ?: 0
-                    if (currentSongDuration == 0) {
-                        currentSongDuration = playerManager?.getDuration() ?: 0
-                    }
+    private fun observeService() {
+        service.observeForever { svc ->
+            svc ?: return@observeForever
+            // 观察当前歌曲变化
+            svc.currentSongLiveData.observeForever { song ->
+                song?.let {
+                    val idx = currentPlaylist.indexOfFirst { it.path == song.path }
+                    if (idx != -1) currentSongIndex = idx
                 }
-                delay(500)
+            }
+            // 观察播放状态
+            svc.isPlayingLiveData.observeForever { playing ->
+                isPlaying = playing
+            }
+            // 观察进度
+            svc.progressLiveData.observeForever { (pos, dur) ->
+                currentPosition = pos
+                currentSongDuration = dur
             }
         }
     }
 
-    fun playCurrent() {
+    fun init(playlist: List<SongModel>, startSong: SongModel? = null) {
+        currentPlaylist = playlist
 
-        val song = getCurrentSong() ?: return
-        Log.d("MusicPlayer", "Playing: ${song.path}")
+        val startIndex = startSong?.let {
+            playlist.indexOfFirst { item -> item.path == it.path }.takeIf { it >= 0 }
+                ?: run {
+                    currentPlaylist = listOf(it) + playlist
+                    0
+                }
+        } ?: 0
 
-        playerManager?.play(song.path)
-        isPlaying = true
-
-        // 延迟获取时长
-        viewModelScope.launch {
-            delay(300)
-            currentSongDuration = playerManager?.getDuration() ?: 0
+        val mode = when (playModes) {
+            PlayMode.SEQUENTIAL -> LightMusicService.PlayMode.SEQUENTIAL
+            PlayMode.RANDOM -> LightMusicService.PlayMode.RANDOM
+            PlayMode.SINGLE_LOOP -> LightMusicService.PlayMode.SINGLE_LOOP
         }
+
+        PlayerManager.setPlaylist(currentPlaylist, startIndex, mode)
+        //Toast.makeText(,"Initialized? PlayerManager is $PlayerManager", Toast.LENGTH_SHORT).show()
+    }
+
+    fun resume() {
+        PlayerManager.resume()
+    }
+
+    fun pause() {
+        PlayerManager.pause()
     }
 
     fun togglePlayPause() {
-        Log.d("MusicPlayer", "togglePlayPause called, isPlaying: $isPlaying")
         if (isPlaying) {
-            playerManager?.pause()
-            isPlaying = false
+            PlayerManager.pause()
         } else {
-            Log.d("MusicPlayer", "Calling playCurrent")
-            playCurrent()  // 这里调用 playCurrent()
-        }
-    }
-    fun togglePlayPauseTo(isPlay : Boolean){
-        if (isPlaying != isPlay){
-            togglePlayPause()
+            PlayerManager.resume()
         }
     }
 
-    fun playNext() {
-        if (currentPlaylist.isEmpty()) return
-
-        val nextIndex = when (playMode) {
-            PlayMode.SEQUENTIAL -> (currentSongIndex + 1) % currentPlaylist.size
-            PlayMode.RANDOM -> Random.nextInt(currentPlaylist.size)
-            PlayMode.SINGLE_LOOP -> currentSongIndex
-        }
-        playSongAtIndex(nextIndex)
-    }
-
-    fun playPrevious() {
-        if (currentPlaylist.isEmpty()) return
-
-        val prevIndex = when (playMode) {
-            PlayMode.SEQUENTIAL -> if (currentSongIndex > 0) currentSongIndex - 1 else currentPlaylist.size - 1
-            PlayMode.RANDOM -> Random.nextInt(currentPlaylist.size)
-            PlayMode.SINGLE_LOOP -> currentSongIndex
-        }
-        playSongAtIndex(prevIndex)
-    }
-
-    fun playSongAtIndex(index: Int) {
-        if (index in currentPlaylist.indices) {
-            currentSongIndex = index
-            playCurrent()
-        }
-    }
+    fun playNext() = PlayerManager.playNext()
+    fun playPrevious() = PlayerManager.playPrevious()
+    fun playSongAtIndex(index: Int) = PlayerManager.playSongAtIndex(index)
 
     fun seekToProgress(progress: Float) {
         if (currentSongDuration > 0) {
@@ -305,27 +367,24 @@ class LightPlayerViewModel : ViewModel() {
         }
     }
 
-    fun seekTo(position: Int) {
-        playerManager?.seekTo(position)
-        currentPosition = position
+    fun seekTo(position: Int) = PlayerManager.seekTo(position)
+
+    fun setPlayMode(mode: PlayMode) {
+        playModes = mode
+        val svcMode = when (mode) {
+            PlayMode.SEQUENTIAL -> LightMusicService.PlayMode.SEQUENTIAL
+            PlayMode.RANDOM -> LightMusicService.PlayMode.RANDOM
+            PlayMode.SINGLE_LOOP -> LightMusicService.PlayMode.SINGLE_LOOP
+        }
+        PlayerManager.setPlaylist(currentPlaylist, currentSongIndex, svcMode)
     }
 
-    fun getCurrentSong(): SongModel? {
-        return currentPlaylist.getOrNull(currentSongIndex)
-    }
-
-    fun clearPlaylist() {
-        currentPlaylist = emptyList()
-        currentSongIndex = -1
-        isPlaying = false
-        currentPosition = 0
-        currentSongDuration = 0
-        playerManager?.stop()
+    fun getCurrentSong() : SongModel? {
+        return PlayerManager.getCurrentSong()
     }
 
     override fun onCleared() {
         super.onCleared()
         progressJob?.cancel()
-        playerManager?.unbind()
     }
 }

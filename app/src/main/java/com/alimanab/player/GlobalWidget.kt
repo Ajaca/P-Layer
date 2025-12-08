@@ -1,6 +1,5 @@
 package com.alimanab.player
 
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -15,7 +14,6 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -27,7 +25,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 
 @Composable
-fun NowPlayingCard(isPlaying : Boolean,Song : SongModel,onCardClick: () -> Unit,onPlayClick : () -> Unit, onNextClick: () -> Unit) {
+fun NowPlayingCard(
+    isPlaying: Boolean,
+    Song: SongModel,
+    onCardClick: () -> Unit,
+    onPlayClick: () -> Unit, onNextClick: () -> Unit
+) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -44,7 +47,6 @@ fun NowPlayingCard(isPlaying : Boolean,Song : SongModel,onCardClick: () -> Unit,
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // 左侧：音符图标
             Icon(
                 painter = painterResource(R.drawable.ic_note_foreground),
                 contentDescription = "Now Playing",
@@ -54,7 +56,6 @@ fun NowPlayingCard(isPlaying : Boolean,Song : SongModel,onCardClick: () -> Unit,
 
             Spacer(modifier = Modifier.width(12.dp))
 
-            // 中间：歌曲信息（占据剩余空间）
             Column(
                 modifier = Modifier.weight(1f)
             ) {
@@ -76,7 +77,6 @@ fun NowPlayingCard(isPlaying : Boolean,Song : SongModel,onCardClick: () -> Unit,
 
             Spacer(modifier = Modifier.width(8.dp))
 
-            // 右侧：播放控制按钮
             Row(
                 verticalAlignment = Alignment.CenterVertically
             ) {

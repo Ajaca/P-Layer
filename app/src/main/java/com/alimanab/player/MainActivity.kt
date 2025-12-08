@@ -1,9 +1,7 @@
 package com.alimanab.player
 
 import android.content.Intent
-import android.media.MediaPlayer
 import android.os.Bundle
-import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -18,10 +16,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.requiredHeightIn
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.material.icons.Icons
@@ -33,7 +29,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.ModalBottomSheetProperties
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SheetValue
@@ -44,6 +39,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -52,11 +48,11 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.SecureFlagPolicy
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.rememberCoroutineScope
 
 
 lateinit var startActivityLauncher: ActivityResultLauncher<Intent>
@@ -67,6 +63,8 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         DB = SQLManager(this)
+        PlayerManager.init(this)
+        PlayerManager.bind()
         setContent {
             Theme {
                 Surface(
@@ -98,6 +96,10 @@ fun MainScreen() {
     var isOpenSongList by remember { mutableStateOf(false)}
     var SongsListStatus by remember { mutableStateOf<ListModel?>(null) }
     val sqlManager = remember { SQLManager(context) }
+    val coroutineScope = rememberCoroutineScope()
+    var Recompose by remember { mutableIntStateOf(0) }
+    var playCardTrigger by remember { mutableIntStateOf(0) }
+
     val bottomSheetState = rememberModalBottomSheetState(
         skipPartiallyExpanded = false,
         confirmValueChange = { it != SheetValue.Expanded }
@@ -107,24 +109,25 @@ fun MainScreen() {
     var currentPosition by remember { mutableStateOf(0) }
     var currentSongDuration by remember { mutableStateOf(0) }
 
-    // 播放列表数据
     var SongsList by remember { mutableStateOf(emptyList<SongModel>()) }
 
-    // 初始化播放器 ViewModel
     val viewModel = remember { LightPlayerViewModel() }
 
-    // 观察播放器状态变化
     val isCurrentlyPlaying by remember { derivedStateOf { viewModel.isPlaying } }
-    val currentSong = viewModel.getCurrentSong()
+    var currentSong = viewModel.getCurrentSong()
 
-    // 更新本地状态
-    LaunchedEffect(isCurrentlyPlaying) { isPlaying = isCurrentlyPlaying }
 
-    LaunchedEffect(currentSong) {
-        currentSong?.let {
-            isShowPlayCard = true
+    var showPlaycard by remember { mutableStateOf<Boolean?>(null) }
+    LaunchedEffect(showPlaycard) {
+        showPlaycard?.let {
+            if (!isShowPlayCard) {
+                isShowPlayCard = true
+            }
+            showPlaycard = null
         }
     }
+
+    LaunchedEffect(isCurrentlyPlaying) { isPlaying = isCurrentlyPlaying }
 
     val navItems = listOf(
         BottomNavigationItem(
@@ -158,20 +161,22 @@ fun MainScreen() {
             ){
                 Column(){
                     if (isShowPlayCard) {
-                        NowPlayingCard(
-                            isPlaying = isPlaying,
-                            Song = currentSong as SongModel,
-                            onPlayClick = {
-                                isPlaying = !isPlaying
-                                viewModel.togglePlayPauseTo(isPlaying)
-                            },
-                            onCardClick = {
-                                isShowPlaySheet = true
-                            },
-                            onNextClick = {
-                                viewModel.playNext()
-                            }
-                        )
+                        key(playCardTrigger) {
+                            NowPlayingCard(
+                                isPlaying = isPlaying,
+                                Song = viewModel.getCurrentSong() as SongModel,
+                                onPlayClick = {
+                                    viewModel.togglePlayPause()
+                                },
+                                onCardClick = {
+                                    isShowPlaySheet = true
+                                },
+                                onNextClick = {
+                                    viewModel.playNext()
+                                    playCardTrigger++
+                                }
+                            )
+                        }
                     }
                     if (!isOpenSongList){
                         BottomAppBar {
@@ -203,12 +208,10 @@ fun MainScreen() {
                 SongsListContent(
                     SongsListStatus as ListModel,
                     onBackClick = { isOpenSongList = false },
-                    onPlay = {list,song -> //list = List<SongModel>, song = SongModel
-
-                        viewModel.init(context, list, song)
+                    onPlay = { list, song -> //list = List<SongModel>, song = SongModel
+                        showPlaycard = true
+                        viewModel.init(list, song)
                         viewModel.togglePlayPause()
-                        isPlaying = true
-
                     }
                 )
             } else {
