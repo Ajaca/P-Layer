@@ -1,7 +1,6 @@
 package com.alimanab.player
 
 import android.content.Context
-import android.content.SharedPreferences
 
 object IOBundle {
     inline fun <reified T> save(context: Context, fileName: String, key: String, value: T)
@@ -28,5 +27,15 @@ object IOBundle {
             is Set<*> -> it.getStringSet(key, defaultValue.filterIsInstance<String>().toSet()) ?: defaultValue
             else -> defaultValue
         }
+    }
+}
+
+object AccountManager {
+    fun AccountVerify(account : String) : Boolean {
+        return account.isNotEmpty()
+    }
+
+    fun PasswordVerify(password : String) : Boolean {
+        return (password.length >= 4 && password.matches(Regex("^[a-zA-Z0-9]*$")))
     }
 }

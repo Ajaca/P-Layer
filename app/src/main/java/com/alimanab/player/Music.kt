@@ -11,8 +11,6 @@ import android.media.MediaPlayer
 import android.os.Binder
 import android.os.IBinder
 import android.util.Log
-import android.widget.Toast
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -278,7 +276,7 @@ object PlayerManager {
     fun getCurrentSong() = musicService?.getCurrentSong()
 }
 
-class LightPlayerViewModel : ViewModel() {
+class PlayerViewModel : ViewModel() {
 
     private var progressJob: Job? = null
 

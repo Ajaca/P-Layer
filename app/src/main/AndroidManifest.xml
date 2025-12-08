@@ -19,10 +19,6 @@
         <meta-data
             android:name="android.media.action.MEDIA_PLAY_FROM_SEARCH"
             android:resource="@xml/searchable" />
-        <service
-            android:name="com.alimanab.player.MusicPlayerService"
-            android:exported="false">
-        </service>
 
         <service
             android:name="com.alimanab.player.LightMusicService"

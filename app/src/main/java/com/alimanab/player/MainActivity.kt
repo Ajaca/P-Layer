@@ -111,7 +111,7 @@ fun MainScreen() {
 
     var SongsList by remember { mutableStateOf(emptyList<SongModel>()) }
 
-    val viewModel = remember { LightPlayerViewModel() }
+    val viewModel = remember { PlayerViewModel() }
 
     val isCurrentlyPlaying by remember { derivedStateOf { viewModel.isPlaying } }
     var currentSong = viewModel.getCurrentSong()
