@@ -56,7 +56,9 @@ fun HomeContent( onChangeBlank : (ListModel) -> Unit ) {
     var isLogin by remember { mutableStateOf(IOBundle.get(context,"login","isLogin",false) as Boolean) }
     var refreshTrigger by remember { mutableStateOf(0) }
     sqlManager = SQLManager(context)
-    var UserID = sqlManager.getUserIdByUsername(IOBundle.get(context,"login","Username","") as String)
+    var UserName = IOBundle.get(context,"login","Username","") as String
+    var UserID = sqlManager.getUserIdByUsername(UserName)
+
     LaunchedEffect(refreshTrigger) {
         isLogin = IOBundle.get(context, "login", "isLogin", false) as Boolean
         if(isLogin) UserID = sqlManager.getUserIdByUsername(IOBundle.get(context,"login","Username","") as String)
@@ -68,9 +70,10 @@ fun HomeContent( onChangeBlank : (ListModel) -> Unit ) {
     ) {
         LoginCard(isLogin){ isLogin = true ; refreshTrigger++ }
         if (isLogin){
+            if (sqlManager.getPlaylistIdByName(UserID,"${UserName}'s Loved") == -1){ sqlManager.createPlaylist(UserID,"${UserName}'s Loved")}
             Row{
                 Box(Modifier.weight(1f)){DividedCardSongsList("All Songs",{ onChangeBlank(ListModel(name = "All Songs",owner = 0,id = -1)) })}
-                Box(Modifier.weight(1f)){DividedCardSongsList("Loved",{ onChangeBlank(ListModel(name = "Loved",owner = 0,id = -2)) })}
+                Box(Modifier.weight(1f)){DividedCardSongsList("Loved",{ onChangeBlank(ListModel(name = "${UserName}'s Loved",owner = UserID,id = sqlManager.getPlaylistIdByName(UserID,"${UserName}'s Loved"))) })}
             }
         } else {
             DividedCardSongsList("All Songs",{ onChangeBlank(ListModel(name = "All Songs",owner = 0,id = -1))})

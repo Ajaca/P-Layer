@@ -115,10 +115,13 @@ fun LoginDialog(
                                 {
                                     if (AccountManager.AccountVerify(email)
                                         && AccountManager.PasswordVerify(password)
-                                        && sqlManager.register(email,password))
+                                        && sqlManager.register(email,password)){
+                                        sqlManager.createPlaylist(sqlManager.getUserIdByUsername(email),"${email}'s Loved")
+                                        sqlManager.createPlaylist(sqlManager.getUserIdByUsername(email),"${email}'s History")
                                         onRegister(email,password)
-                                    else
+                                    } else {
                                         Toast.makeText(context, "Invalid Account or password", Toast.LENGTH_SHORT).show()
+                                    }
                                 },
                             modifier = Modifier
                                 .fillMaxWidth()

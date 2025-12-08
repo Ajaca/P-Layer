@@ -1,7 +1,7 @@
 package com.alimanab.player
 
 import android.annotation.SuppressLint
-import android.util.Log
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -11,17 +11,13 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.IconButton
@@ -36,7 +32,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.material3.Icon
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -47,9 +42,17 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.sp
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Menu
-import androidx.compose.runtime.tooling.parseSourceInformation
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.window.Popup
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @OptIn(ExperimentalMaterial3Api::class)
@@ -166,7 +169,7 @@ private fun EmptyPlaylistContent(modifier: Modifier = Modifier) {
 @Composable
 fun SongCard(Song : SongModel, onClick: () -> Unit, onConfig: () -> Unit ) {
     val context = LocalContext.current
-    var isConfirmDelete by remember { mutableStateOf(false) }
+    var isConfigVisible by remember { mutableStateOf(false) }
     Surface(
         modifier = Modifier
             .fillMaxWidth()
@@ -201,7 +204,7 @@ fun SongCard(Song : SongModel, onClick: () -> Unit, onConfig: () -> Unit ) {
             ) {
                 Text(text = Song.title, fontSize = 20.sp)
             }
-            IconButton(modifier = Modifier.size(30.dp),onClick = { isConfirmDelete = true }) {
+            IconButton(modifier = Modifier.size(30.dp),onClick = { isConfigVisible = true }) {
                 Icon(
                     imageVector = Icons.Default.Menu,
                     modifier = Modifier.size(30.dp),
@@ -210,13 +213,70 @@ fun SongCard(Song : SongModel, onClick: () -> Unit, onConfig: () -> Unit ) {
                 )
             }
         }
-        if (isConfirmDelete){
-            /*
-            DeleteConfirmDialog(listModel,
-                onDismiss = { isConfirmDelete = false },
-                onDeleted = { onConfig() }
-            )
-            */
+        if (isConfigVisible) {
+            Popup(
+                alignment = Alignment.TopEnd,
+                offset = IntOffset(x = -16, y = 150), // 调整弹出位置
+                onDismissRequest = { isConfigVisible = false }
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(4.dp),
+                    tonalElevation = 3.dp,
+                    shadowElevation = 6.dp,
+                    border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant)
+                ) {
+                    Column {
+                        PopupMenuItem(
+                            text = "播放",
+                            icon = Icons.Default.PlayArrow,
+                            onClick = { isConfigVisible = false }
+                        )
+                        PopupMenuItem(
+                            text = "添加到播放列表",
+                            icon = Icons.Default.Add,
+                            onClick = { isConfigVisible = false }
+                        )
+                        PopupMenuItem(
+                            text = "分享",
+                            icon = Icons.Default.Share,
+                            onClick = { isConfigVisible = false }
+                        )
+                        HorizontalDivider()
+                        PopupMenuItem(
+                            text = "歌曲信息",
+                            icon = Icons.Default.Info,
+                            onClick = { isConfigVisible = false }
+                        )
+                    }
+                }
+            }
         }
+    }
+}
+
+@Composable
+fun PopupMenuItem(
+    text: String,
+    icon: ImageVector,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(48.dp)
+            .clickable { onClick() }
+            .padding(horizontal = 16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            modifier = Modifier.size(20.dp)
+        )
+        Spacer(modifier = Modifier.width(12.dp))
+        Text(
+            text = text,
+            style = MaterialTheme.typography.bodyMedium
+        )
     }
 }
