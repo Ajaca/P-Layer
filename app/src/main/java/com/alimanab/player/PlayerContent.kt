@@ -76,7 +76,7 @@ fun MusicPlayerScreen(
     var currentPosition by remember { mutableStateOf(viewmodel.currentPosition) }
     var currentSongDuration by remember { mutableStateOf(viewmodel.currentSongDuration) }
 
-    // ✅ 定时更新位置
+    //定时更新位置
     LaunchedEffect(Unit) {
         while (true) {
             kotlinx.coroutines.delay(500) // 每500ms更新一次
@@ -174,8 +174,8 @@ fun MusicPlayerScreen(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text(text = formatTime(currentPosition / 1000))
-                Text(text = formatTime(currentSongDuration / 1000))
+                Text(text = formatTime(currentPosition))
+                Text(text = formatTime(currentSongDuration))
             }
         }
 
@@ -233,8 +233,8 @@ fun MusicPlayerScreenPreview() {
         MusicPlayerScreen { }
     }
 }
-
-private fun formatTime(seconds: Int): String {
+fun formatTime(milliseconds: Int): String {
+    val seconds = milliseconds / 1000
     val minutes = seconds / 60
     val remainingSeconds = seconds % 60
     return String.format("%d:%02d", minutes, remainingSeconds)

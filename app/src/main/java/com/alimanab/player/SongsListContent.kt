@@ -1,6 +1,7 @@
 package com.alimanab.player
 
 import android.annotation.SuppressLint
+import android.icu.text.TimeZoneFormat
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -44,14 +45,19 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material3.Button
+import androidx.compose.material3.Card
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.modifier.modifierLocalConsumer
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.Popup
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
@@ -170,6 +176,8 @@ private fun EmptyPlaylistContent(modifier: Modifier = Modifier) {
 fun SongCard(Song : SongModel, onClick: () -> Unit, onConfig: () -> Unit ) {
     val context = LocalContext.current
     var isConfigVisible by remember { mutableStateOf(false) }
+    var isShowAddToList by remember { mutableStateOf(false) }
+    var isShowInfo by remember { mutableStateOf(false) }
     Surface(
         modifier = Modifier
             .fillMaxWidth()
@@ -227,27 +235,67 @@ fun SongCard(Song : SongModel, onClick: () -> Unit, onConfig: () -> Unit ) {
                 ) {
                     Column {
                         PopupMenuItem(
-                            text = "播放",
-                            icon = Icons.Default.PlayArrow,
+                            text = "Love",
+                            icon = Icons.Default.Favorite,
                             onClick = { isConfigVisible = false }
                         )
                         PopupMenuItem(
-                            text = "添加到播放列表",
+                            text = "Add to List",
                             icon = Icons.Default.Add,
-                            onClick = { isConfigVisible = false }
-                        )
-                        PopupMenuItem(
-                            text = "分享",
-                            icon = Icons.Default.Share,
                             onClick = { isConfigVisible = false }
                         )
                         HorizontalDivider()
                         PopupMenuItem(
-                            text = "歌曲信息",
+                            text = "Info",
                             icon = Icons.Default.Info,
-                            onClick = { isConfigVisible = false }
+                            onClick = { isShowInfo = true ; isConfigVisible = false }
                         )
                     }
+                }
+            }
+        }
+        if (isShowInfo) {
+            InfoDialog(Song) { isShowInfo = false }
+        }
+        if (isShowAddToList) {
+
+        }
+    }
+}
+
+@Composable
+fun InfoDialog(Song : SongModel,onDismiss : () -> Unit) {
+    Dialog(onDismissRequest = onDismiss) {
+        Card (
+            modifier = Modifier.fillMaxWidth().padding(6.dp)
+        ) {
+            Column(Modifier.padding(6.dp)) {
+                Text("Information", style = MaterialTheme.typography.headlineMedium)
+                Spacer(Modifier.height(10.dp))
+                Text("Title: ${Song.title}", style = MaterialTheme.typography.bodyMedium)
+                Text("Artist: ${Song.artist}", style = MaterialTheme.typography.bodyMedium)
+                Text("Duration: " + formatTime(Song.duration), style = MaterialTheme.typography.bodyMedium)
+                Text("Path: ${Song.path}", style = MaterialTheme.typography.bodyMedium)
+                Text("Filename: ${Song.fileName}", style = MaterialTheme.typography.bodyMedium)
+                Text("Size: ${Song.size}", style = MaterialTheme.typography.bodyMedium)
+                Spacer(Modifier.height(20.dp))
+                Button(modifier = Modifier.fillMaxWidth(), onClick = onDismiss) {
+                    Text("OK", style = MaterialTheme.typography.bodySmall)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun AddToListDialog(UserID : Int,onDismiss : () -> Unit,onAdd : (Int) -> Unit) {
+    val List = sqlManager.getUserPlaylists(UserID)
+    Dialog(onDismissRequest = onDismiss) {
+        Card(Modifier.fillMaxWidth().padding(10.dp)) {
+            Column(Modifier.padding(10.dp)) {
+                Text("Add to List",style = MaterialTheme.typography.headlineMedium)
+                LazyColumn() {
+                    //TODO
                 }
             }
         }
