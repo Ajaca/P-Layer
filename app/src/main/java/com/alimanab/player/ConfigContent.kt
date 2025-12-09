@@ -56,9 +56,9 @@ fun ConfigContent() {
     ) { granted ->
         permissionGranted = granted
         if (granted) {
-            Toast.makeText(context, "存储权限已授予", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, "Storage permission granted", Toast.LENGTH_SHORT).show()
         } else {
-            Toast.makeText(context, "需要存储权限才能使用完整功能", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, "Storage permission needed", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -466,7 +466,6 @@ private fun importSongsFromPath(context: Context) {
     }
 }
 
-//与 Config() 中相同的目录遍历函数 - 重命名避免冲突
 private fun traverseDirForImport(dir: File, result: MutableList<File>) {
     dir.listFiles()?.forEach { file ->
         if (file.isDirectory) {
@@ -477,7 +476,6 @@ private fun traverseDirForImport(dir: File, result: MutableList<File>) {
     }
 }
 
-//与 Config() 中完全相同的音频文件判断函数
 private fun isAudioFile(name: String): Boolean {
     val n = name.lowercase()
     return n.endsWith(".mp3") || n.endsWith(".flac") || n.endsWith(".wav") ||
@@ -485,32 +483,10 @@ private fun isAudioFile(name: String): Boolean {
             n.endsWith(".wma") || n.endsWith(".ape")
 }
 
-//从 TreeUri 提取路径 - 与 Config() 中完全相同
-private fun extractPathFromTreeUri(treeUri: Uri): String? {
-    return try {
-        val docId = DocumentsContract.getTreeDocumentId(treeUri)
-        val parts = docId.split(":", limit = 2)
-        val (root, subPath) = if (parts.size == 1) parts[0] to "" else parts[0] to parts[1]
-
-        val basePath = when (root) {
-            "primary" -> Environment.getExternalStorageDirectory().absolutePath
-            else -> "/storage/$root"
-        }
-
-        if (subPath.isEmpty()) {
-            basePath
-        } else {
-            "$basePath/$subPath".replace("//", "/")
-        }
-    } catch (e: Exception) {
-        null
-    }
-}
 
 
 private fun createSongFromFile(file: File): SongModel? {
     return try {
-        // 使用 MediaMetadataRetriever 提取元数据（与 Config() 中的扫描逻辑配合）
         val mediaMetadataRetriever = MediaMetadataRetriever()
         mediaMetadataRetriever.setDataSource(file.absolutePath)
 
@@ -534,7 +510,7 @@ private fun createSongFromFile(file: File): SongModel? {
             size = file.length()
         )
     } catch (e: Exception) {
-        println("无法读取音频元数据: ${file.absolutePath}, ${e.message}")
+        println("Can not read metadata: ${file.absolutePath}, ${e.message}")
         // 即使无法读取元数据，也创建一个基本的 SongModel
         SongModel(
             title = file.nameWithoutExtension,

@@ -45,6 +45,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Menu
@@ -54,6 +55,7 @@ import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.ListItem
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.modifier.modifierLocalConsumer
 import androidx.compose.ui.unit.IntOffset
@@ -126,6 +128,7 @@ fun SongsListContent( list : ListModel, onBackClick: () -> Unit = {}, onPlay: (L
                     items(SongsInList.size) { index ->
                         SongCard(
                             Song = SongsInList[index],
+                            List = list,
                             onConfig = {},
                             onClick = {
                                 onPlay(SongsInList,SongsInList[index])
@@ -173,10 +176,11 @@ private fun EmptyPlaylistContent(modifier: Modifier = Modifier) {
 }
 
 @Composable
-fun SongCard(Song : SongModel, onClick: () -> Unit, onConfig: () -> Unit ) {
+fun SongCard(Song : SongModel,List : ListModel,onClick: () -> Unit, onConfig: () -> Unit ) {
     val context = LocalContext.current
     var isConfigVisible by remember { mutableStateOf(false) }
     var isShowAddToList by remember { mutableStateOf(false) }
+    var isShowRemoveFromList by remember { mutableStateOf(false) }
     var isShowInfo by remember { mutableStateOf(false) }
     Surface(
         modifier = Modifier
@@ -242,8 +246,15 @@ fun SongCard(Song : SongModel, onClick: () -> Unit, onConfig: () -> Unit ) {
                         PopupMenuItem(
                             text = "Add to List",
                             icon = Icons.Default.Add,
-                            onClick = { isConfigVisible = false }
+                            onClick = { isShowAddToList = true ; isConfigVisible = false }
                         )
+                        if(List.id != -1){
+                            PopupMenuItem(
+                                text = "Remove from List",
+                                icon = Icons.Default.Delete,
+                                onClick = { isShowRemoveFromList = true ; isConfigVisible = false }
+                            )
+                        }
                         HorizontalDivider()
                         PopupMenuItem(
                             text = "Info",
@@ -258,7 +269,15 @@ fun SongCard(Song : SongModel, onClick: () -> Unit, onConfig: () -> Unit ) {
             InfoDialog(Song) { isShowInfo = false }
         }
         if (isShowAddToList) {
-
+            AddToListDialog(
+                Song = Song,
+                UserID = sqlManager.getUserIdByUsername(IOBundle.get(context,"login","Username","") as String),
+                onDismiss = { isShowAddToList = false },
+                onAdd = {}
+            )
+        }
+        if (isShowRemoveFromList) {
+            RemoveConfirmDialog(List,Song) { isShowRemoveFromList = false }
         }
     }
 }
@@ -267,7 +286,7 @@ fun SongCard(Song : SongModel, onClick: () -> Unit, onConfig: () -> Unit ) {
 fun InfoDialog(Song : SongModel,onDismiss : () -> Unit) {
     Dialog(onDismissRequest = onDismiss) {
         Card (
-            modifier = Modifier.fillMaxWidth().padding(6.dp)
+            modifier = Modifier.fillMaxWidth().padding(16.dp)
         ) {
             Column(Modifier.padding(6.dp)) {
                 Text("Information", style = MaterialTheme.typography.headlineMedium)
@@ -288,14 +307,68 @@ fun InfoDialog(Song : SongModel,onDismiss : () -> Unit) {
 }
 
 @Composable
-fun AddToListDialog(UserID : Int,onDismiss : () -> Unit,onAdd : (Int) -> Unit) {
+fun AddToListDialog(UserID : Int,Song: SongModel,onDismiss : () -> Unit,onAdd : (Int) -> Unit) {
     val List = sqlManager.getUserPlaylists(UserID)
+    val ListModels = List.map { playlistName ->
+        val playlistId = sqlManager.getPlaylistIdByName(UserID, playlistName)
+        ListModel(
+            name = playlistName,
+            id = playlistId,
+            owner = UserID
+        )
+    }
     Dialog(onDismissRequest = onDismiss) {
-        Card(Modifier.fillMaxWidth().padding(10.dp)) {
+        Card(Modifier.fillMaxWidth().padding(20.dp)) {
             Column(Modifier.padding(10.dp)) {
                 Text("Add to List",style = MaterialTheme.typography.headlineMedium)
-                LazyColumn() {
-                    //TODO
+                LazyColumn(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                    items(List.size) { index ->
+                        CardSongsList(
+                            listModel = ListModels[index],
+                            onClick = { sqlManager.addSongToPlaylist(ListModels[index].id,Song.id) ; onDismiss() },
+                            onConfig = {}
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun RemoveConfirmDialog(list: ListModel,Song: SongModel, onDismiss: () -> Unit){
+    val context = LocalContext.current
+    var text by remember { mutableStateOf( "" )}
+    sqlManager = SQLManager(context)
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text("Warning", style = MaterialTheme.typography.headlineSmall)
+
+                Spacer(modifier = Modifier.height(16.dp))
+                Text("Do you sure to Delete ${Song.title} from ${list.name} ?")
+                Spacer(modifier = Modifier.height(16.dp))
+                Row(){
+                    Button(
+                        onClick = { onDismiss() },
+                        modifier = Modifier
+                            .weight(2f)
+                    ) {
+                        Text("Cancel")
+                    }
+                    Spacer(Modifier.width(20.dp))
+                    Button(
+                        onClick = { sqlManager.removeSongFromPlaylist(list.id,Song.id) ; onDismiss()},
+                        modifier = Modifier
+                            .weight(2f)
+                    ) {
+                        Text("OK")
+                    }
                 }
             }
         }
