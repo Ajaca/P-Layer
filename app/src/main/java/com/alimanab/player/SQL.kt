@@ -5,6 +5,10 @@ import android.content.Context
 import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flow
 
 class SQL(context: Context?) : SQLiteOpenHelper(context, "SimpleMusic.db", null, 2) {
 
@@ -423,6 +427,21 @@ class SQLManager(context: Context) {
             db.close()
         }
     }
+
+    fun getListSongsFlow(listID : Int): Flow<List<SongModel>> = flow {
+        while (true) {
+            emit(getPlaylistSongs(listID))
+            delay(1000) // 每秒检查一次，或者根据实际需求调整
+        }
+    }.distinctUntilChanged()
+
+    fun getAllSongsFlow(): Flow<List<SongModel>> = flow {
+        while (true) {
+            emit(getAllSongs())
+            delay(1000) // 每秒检查一次，或者根据实际需求调整
+        }
+    }.distinctUntilChanged()
+
 }
 
 // 歌曲数据模型（与数据库 songs 表字段完全对应）

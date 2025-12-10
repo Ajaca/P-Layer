@@ -1,7 +1,6 @@
 package com.alimanab.player
 
 import android.annotation.SuppressLint
-import android.icu.text.TimeZoneFormat
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -33,7 +32,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.material3.Icon
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -49,18 +47,16 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.ListItem
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.produceState
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.modifier.modifierLocalConsumer
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.Popup
+import kotlin.collections.emptyList
 
 @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
 @OptIn(ExperimentalMaterial3Api::class)
@@ -71,15 +67,15 @@ fun SongsListContent( list : ListModel, onBackClick: () -> Unit = {}, onPlay: (L
     var isPlayed by remember { mutableStateOf(true) }
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     val sqlManager = remember { SQLManager(context = context) }
-    val SongsInList by remember(list) {
-        derivedStateOf {
-            if (list.id == -1) {
-                sqlManager.getAllSongs()
-            } else {
-                sqlManager.getPlaylistSongs(list.id)
-            }
-        }
-    }
+    val allSongs by sqlManager.getAllSongsFlow()
+        .collectAsState(initial = emptyList())
+
+    val playlistSongs by sqlManager.getListSongsFlow(list.id)
+        .collectAsState(initial = emptyList())
+
+    // 根据 list.id 选择数据源
+    val songsInList = if (list.id == -1) allSongs else playlistSongs
+
 
     Scaffold(
         topBar = {
@@ -93,7 +89,7 @@ fun SongsListContent( list : ListModel, onBackClick: () -> Unit = {}, onPlay: (L
                             overflow = TextOverflow.Ellipsis
                         )
                         Text(
-                            text = "${SongsInList.size} Songs",
+                            text = "${songsInList.size} Songs",
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
                         )
@@ -116,7 +112,7 @@ fun SongsListContent( list : ListModel, onBackClick: () -> Unit = {}, onPlay: (L
             )
         },
         content = { innerPadding ->
-            if (SongsInList.isEmpty()) {
+            if (songsInList.isEmpty()) {
                 EmptyPlaylistContent(
                     modifier = Modifier.padding(innerPadding)
                 )
@@ -125,13 +121,13 @@ fun SongsListContent( list : ListModel, onBackClick: () -> Unit = {}, onPlay: (L
                     modifier = Modifier.padding(innerPadding),
                     verticalArrangement = Arrangement.spacedBy(1.dp)
                 ) {
-                    items(SongsInList.size) { index ->
+                    items(songsInList.size) { index ->
                         SongCard(
-                            Song = SongsInList[index],
+                            Song = songsInList[index],
                             List = list,
-                            onConfig = {},
+                            onConfig = { },
                             onClick = {
-                                onPlay(SongsInList,SongsInList[index])
+                                onPlay(songsInList,songsInList[index])
                             }
                         )
                     }
@@ -182,6 +178,7 @@ fun SongCard(Song : SongModel,List : ListModel,onClick: () -> Unit, onConfig: ()
     var isShowAddToList by remember { mutableStateOf(false) }
     var isShowRemoveFromList by remember { mutableStateOf(false) }
     var isShowInfo by remember { mutableStateOf(false) }
+    val isLogin by remember { mutableStateOf(IOBundle.get(context, "login", "isLogin", false) as Boolean) }
     Surface(
         modifier = Modifier
             .fillMaxWidth()
@@ -216,20 +213,22 @@ fun SongCard(Song : SongModel,List : ListModel,onClick: () -> Unit, onConfig: ()
             ) {
                 Text(text = Song.title, fontSize = 20.sp)
             }
-            IconButton(modifier = Modifier.size(30.dp),onClick = { isConfigVisible = true }) {
-                Icon(
-                    imageVector = Icons.Default.Menu,
-                    modifier = Modifier.size(30.dp),
-                    contentDescription = "Modifier",
-                    tint = MaterialTheme.colorScheme.onTertiaryContainer
-                )
+            if (isLogin) {
+                IconButton(modifier = Modifier.size(30.dp),onClick = { isConfigVisible = true }) {
+                    Icon(
+                        imageVector = Icons.Default.Menu,
+                        modifier = Modifier.size(30.dp),
+                        contentDescription = "Modifier",
+                        tint = MaterialTheme.colorScheme.onTertiaryContainer,
+                    )
+                }
             }
         }
         if (isConfigVisible) {
             Popup(
                 alignment = Alignment.TopEnd,
                 offset = IntOffset(x = -16, y = 150), // 调整弹出位置
-                onDismissRequest = { isConfigVisible = false }
+                onDismissRequest = { isConfigVisible = false ; onConfig() }
             ) {
                 Surface(
                     shape = RoundedCornerShape(4.dp),
