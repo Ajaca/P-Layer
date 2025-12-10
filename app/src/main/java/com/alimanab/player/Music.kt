@@ -1,4 +1,5 @@
 package com.alimanab.player
+
 import android.annotation.SuppressLint
 import android.app.Service
 import android.content.ComponentName
@@ -114,9 +115,15 @@ class LightMusicService : Service() {
 
     fun setPlaylist(list: List<SongModel>, startIndex: Int = 0, mode: PlayMode = PlayMode.SEQUENTIAL) {
         playlist = list.toMutableList()
-        currentIndex = startIndex.coerceIn(0, list.size - 1)
+        currentIndex = when {
+            playlist.isEmpty() -> -1
+            startIndex == -1 -> 0  // 如果传入-1，默认选择第一首
+            else -> startIndex.coerceIn(0, playlist.size - 1)
+        }
         playMode = mode
-        playCurrent()
+        if (currentIndex >= 0) {
+            playCurrent()
+        }
     }
 
     fun playCurrent() {

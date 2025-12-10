@@ -27,7 +27,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.platform.LocalContext
 
-lateinit var sqlManager: SQLManager
+
 @Composable
 fun LoginDialog(
     onDismiss: () -> Unit,
@@ -117,7 +117,6 @@ fun LoginDialog(
                                         && AccountManager.PasswordVerify(password)
                                         && sqlManager.register(email,password)){
                                         sqlManager.createPlaylist(sqlManager.getUserIdByUsername(email),"${email}'s Loved")
-                                        sqlManager.createPlaylist(sqlManager.getUserIdByUsername(email),"${email}'s History")
                                         onRegister(email,password)
                                     } else {
                                         Toast.makeText(context, "Invalid Account or password", Toast.LENGTH_SHORT).show()

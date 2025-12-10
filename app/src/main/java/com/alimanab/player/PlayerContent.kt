@@ -1,49 +1,35 @@
 package com.alimanab.player
 
-import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.wrapContentHeight
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.wrapContentWidth
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Build
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.outlined.FavoriteBorder
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Slider
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -53,38 +39,55 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Popup
 
 @Composable
 fun MusicPlayerScreen(
+    viewmodel : PlayerViewModel,
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
-    val viewmodel = PlayerViewModel()
+    val viewmodel = viewmodel
     var isPlaying by remember { mutableStateOf(false) }
     var currentProgress by remember { mutableStateOf(0f) }
-    var isLiked by remember { mutableStateOf(false) }
+    var isLoved by remember { mutableStateOf(false) }
     var isCollected by remember { mutableStateOf(false) }
     var isDownloaded by remember { mutableStateOf(false) }
     var currentSong by remember { mutableStateOf(viewmodel.getCurrentSong() as SongModel) }
+    var isShowModePopUp by remember { mutableStateOf(false) }
+    var playModeTag by remember { mutableStateOf(0) }
+    var isShowAddToList by remember { mutableStateOf(false) }
+    var isShowInfo by remember { mutableStateOf(false) }
+    var isLogin by remember { mutableStateOf(IOBundle.get(context,"login","isLogin",false) as Boolean) }
+    var userName = IOBundle.get(context,"login","Username","") as String
+    var UserID = sqlManager.getUserIdByUsername(userName)
+    val usersLovedID = sqlManager.getPlaylistIdByName(sqlManager.getUserIdByUsername(userName),"${userName}'s Loved")
+    if (isLogin && sqlManager.isSongInPlaylist(usersLovedID, currentSong.id)) {
+        isLoved = true
+    }
 
     var currentPosition by remember { mutableStateOf(viewmodel.currentPosition) }
     var currentSongDuration by remember { mutableStateOf(viewmodel.currentSongDuration) }
 
+    LaunchedEffect(currentSong) {
+        if (isLogin && sqlManager.isSongInPlaylist(usersLovedID, currentSong.id)) {
+            isLoved = true
+        }
+    }
+
     //定时更新位置
     LaunchedEffect(Unit) {
         while (true) {
-            kotlinx.coroutines.delay(500) // 每500ms更新一次
+            kotlinx.coroutines.delay(500)
             currentPosition = viewmodel.currentPosition
             currentSongDuration = viewmodel.currentSongDuration
             currentSong = viewmodel.getCurrentSong() as SongModel
-            //val ratio = currentPosition.toFloat() / currentSongDuration.toFloat()
-            //Toast.makeText(context, ratio.toString(), Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -114,16 +117,20 @@ fun MusicPlayerScreen(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 IconButton(
-                    onClick = { isLiked = !isLiked },
+                    onClick = {
+                        if (isLoved) sqlManager.removeSongFromPlaylist(sqlManager.getPlaylistIdByName(UserID,"${userName}'s Loved"),currentSong.id)
+                        else sqlManager.addSongToPlaylist(sqlManager.getPlaylistIdByName(UserID,"${userName}'s Loved"),currentSong.id)
+                        isLoved = !isLoved
+                              },
                     modifier = Modifier.size(48.dp)
                 ) {
                     Icon(
-                        imageVector = if (isLiked) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
+                        imageVector = if (isLoved) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
                         contentDescription = "Fav",
-                        tint = if (isLiked) Color.Red else LocalContentColor.current
+                        tint = if (isLoved) Color.Red else LocalContentColor.current
                     )
                 }
-                Text(text = "Fav")
+                Text(text = "Loved")
             }
 
             Column(
@@ -131,13 +138,13 @@ fun MusicPlayerScreen(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 IconButton(
-                    onClick = { isCollected = !isCollected },
+                    onClick = { isShowAddToList = true },
                     modifier = Modifier.size(48.dp)
                 ) {
                     Icon(
-                        imageVector = if (isCollected) Icons.Filled.Build else Icons.Filled.Done,
+                        imageVector = Icons.Default.Add,
                         contentDescription = "List",
-                        tint = if (isCollected) Color.Blue else LocalContentColor.current
+                        tint = LocalContentColor.current
                     )
                 }
                 Text(text = "List")
@@ -148,16 +155,16 @@ fun MusicPlayerScreen(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 IconButton(
-                    onClick = { isDownloaded = !isDownloaded },
+                    onClick = { isShowInfo = true },
                     modifier = Modifier.size(48.dp)
                 ) {
                     Icon(
-                        imageVector = if (isDownloaded) Icons.Filled.Done else Icons.Filled.Add,
-                        contentDescription = "Download",
-                        tint = if (isDownloaded) Color.Green else LocalContentColor.current
+                        imageVector = Icons.Default.Info,
+                        contentDescription = "Information",
+                        tint = LocalContentColor.current
                     )
                 }
-                Text(text = "Down")
+                Text(text = "Info")
             }
         }
 
@@ -206,22 +213,78 @@ fun MusicPlayerScreen(
                     onClick = { isPlaying = !isPlaying ; viewmodel.togglePlayPause()},
                     modifier = Modifier.size(64.dp)
                 ) {
-                    Icon(
-                        imageVector = if (isPlaying) Icons.Filled.Close else Icons.Filled.PlayArrow,
-                        contentDescription = if (isPlaying) "Pause" else "Play",
-                        modifier = Modifier.size(32.dp)
-                    )
+                    if (isPlaying) {
+                        Icon(
+                            imageVector = Icons.Filled.PlayArrow,
+                            contentDescription = "Play",
+                            modifier = Modifier.size(32.dp)
+                        )
+                    } else {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_pause),
+                            contentDescription = "Pause",
+                            modifier = Modifier.size(32.dp)
+                        )
+                    }
                 }
 
                 IconButton(onClick = { PlayerManager.playNext() ; currentSong = viewmodel.getCurrentSong() as SongModel }) {
                     Icon(
                         imageVector = Icons.Default.KeyboardArrowRight,
-                        contentDescription = "Next"
+                        contentDescription = "Next",
                     )
                 }
             }
-
-            Spacer(modifier = Modifier.size(48.dp))
+            IconButton(onClick = { isShowModePopUp = true }) {
+                Icon(
+                    imageVector = if (playModeTag == 1) Icons.Default.Share else if (playModeTag == 2) Icons.Default.Refresh else Icons.Default.KeyboardArrowRight,
+                    contentDescription = "Back"
+                )
+            }
+        }
+        if (isShowModePopUp) {
+            Popup(
+                alignment = Alignment.TopEnd,
+                offset = IntOffset(x = 0, y = 200), // 调整弹出位置
+                onDismissRequest = { isShowModePopUp = false }
+            ) {
+                Surface(
+                    modifier = Modifier.wrapContentWidth(unbounded = true),
+                    shape = RoundedCornerShape(4.dp),
+                    tonalElevation = 3.dp,
+                    shadowElevation = 6.dp,
+                    border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant)
+                ) {
+                    Column {
+                        PopupMenuItem(
+                            text = "Sequential",
+                            icon = Icons.Default.PlayArrow,
+                            onClick = { viewmodel.setPlayMode(PlayerViewModel.PlayMode.SEQUENTIAL) ; playModeTag = 0 ;isShowModePopUp = false }
+                        )
+                        PopupMenuItem(
+                            text = "Random",
+                            icon = Icons.Default.Share,
+                            onClick = { viewmodel.setPlayMode(PlayerViewModel.PlayMode.RANDOM) ; playModeTag = 1 ; isShowModePopUp = false }
+                        )
+                        PopupMenuItem(
+                            text = "Single Loop",
+                            icon = Icons.Default.Refresh,
+                            onClick = { viewmodel.setPlayMode(PlayerViewModel.PlayMode.SINGLE_LOOP) ; playModeTag = 2 ; isShowModePopUp = false }
+                        )
+                    }
+                }
+            }
+        }
+        if (isShowInfo) {
+            InfoDialog(currentSong) { isShowInfo = false }
+        }
+        if (isShowAddToList) {
+            AddToListDialog(
+                Song = currentSong,
+                UserID = UserID,
+                onDismiss = { isShowAddToList = false },
+                onAdd = {}
+            )
         }
     }
 }
@@ -230,7 +293,7 @@ fun MusicPlayerScreen(
 @Composable
 fun MusicPlayerScreenPreview() {
     Theme{
-        MusicPlayerScreen { }
+        MusicPlayerScreen(viewModel) { }
     }
 }
 fun formatTime(milliseconds: Int): String {
@@ -244,6 +307,6 @@ fun formatTime(milliseconds: Int): String {
 @Composable
 fun musicPreview(){
     Theme {
-        MusicPlayerScreen {  }
+        MusicPlayerScreen(viewModel) {  }
     }
 }

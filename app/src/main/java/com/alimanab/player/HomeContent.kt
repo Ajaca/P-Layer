@@ -19,6 +19,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayArrow
@@ -72,8 +73,9 @@ fun HomeContent( onChangeBlank : (ListModel) -> Unit ) {
         if (isLogin){
             if (sqlManager.getPlaylistIdByName(UserID,"${UserName}'s Loved") == -1){ sqlManager.createPlaylist(UserID,"${UserName}'s Loved")}
             Row{
-                Box(Modifier.weight(1f)){DividedCardSongsList("All Songs",{ onChangeBlank(ListModel(name = "All Songs",owner = 0,id = -1)) })}
-                Box(Modifier.weight(1f)){DividedCardSongsList("Loved",{ onChangeBlank(ListModel(name = "${UserName}'s Loved",owner = UserID,id = sqlManager.getPlaylistIdByName(UserID,"${UserName}'s Loved"))) })}
+                Box(Modifier.weight(1f)){DividedVerticalCardSongsList("All Songs",{ onChangeBlank(ListModel(name = "All Songs",owner = -1,id = -2)) })}
+                Box(Modifier.weight(1f)){DividedVerticalCardSongsList("Loved",{ onChangeBlank(ListModel(name = "${UserName}'s Loved",owner = UserID,id = sqlManager.getPlaylistIdByName(UserID,"${UserName}'s Loved"))) })}
+                Box(Modifier.weight(1f)){DividedVerticalCardSongsList("History",{ onChangeBlank(ListModel(name = "History",owner = sqlManager.getUserIdByUsername("GLOBAL"),id = sqlManager.getPlaylistIdByName(sqlManager.getUserIdByUsername("GLOBAL"),"History"))) })}
             }
         } else {
             DividedCardSongsList("All Songs",{ onChangeBlank(ListModel(name = "All Songs",owner = 0,id = -1))})
@@ -154,7 +156,7 @@ fun LoginCard(isLogin : Boolean, onLogin : () -> Unit) {
                     .fillMaxWidth()
                     .offset(x=20.dp),
             ) {
-                when (isLogin as Boolean){
+                when (isLogin){
                     true ->Text(
                         text = IOBundle.get(context,"login","Username","") as String,
                         fontSize = 20.sp
@@ -315,6 +317,73 @@ fun DividedCardSongsList(name : String, onClick: () -> Unit)  {
 }
 
 @Composable
+fun DividedVerticalCardSongsList(name : String, onClick: () -> Unit)  {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable{ onClick() },
+        //.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(4.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+    ) {
+        Column(
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Surface(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(shape = RectangleShape),
+                color = MaterialTheme.colorScheme.primaryContainer,
+            ) {
+                if (name == "All Songs")
+                    Icon(
+                        painter = painterResource(R.drawable.ic_note_foreground),
+                        contentDescription = "playlist",
+                        modifier = Modifier
+                            .size(16.dp),
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                else if (name == "Loved")
+                    Icon(
+                        imageVector = Icons.Default.Favorite,
+                        contentDescription = "playlist",
+                        modifier = Modifier
+                            .size(12.dp)
+                            .padding(8.dp),
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                else if (name == "History")
+                    Icon(
+                        imageVector = Icons.Default.DateRange,
+                        contentDescription = "playlist",
+                        modifier = Modifier
+                            .size(12.dp)
+                            .padding(8.dp),
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                else
+                    Icon(
+                        imageVector = Icons.Default.PlayArrow,
+                        contentDescription = "playlist",
+                        modifier = Modifier
+                            .size(16.dp),
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                }
+            Column() {
+                Text(text = name, fontSize = 18.sp)
+            }
+        }
+    }
+}
+
+@Composable
 fun AddCardSongsList(onFinish: () -> Unit)  {
     val context = LocalContext.current
     var isDialog by remember {mutableStateOf(false) }
@@ -438,9 +507,6 @@ fun DeleteConfirmDialog(listModel: ListModel, onDismiss: () -> Unit, onDeleted: 
         }
     }
 }
-
-
-
 
 @Preview
 @Composable

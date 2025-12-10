@@ -85,6 +85,7 @@ fun ConfigContent() {
 
     var refreshTrigger by remember { mutableStateOf(0) }
     var isLogin by remember { mutableStateOf(IOBundle.get(context,"login","isLogin",false)) }
+    IOBundle.save(context,"config","_Set Colour","Default,Dark,Blue,Green")
     LaunchedEffect(refreshTrigger) {
         isLogin = IOBundle.get(context, "login", "isLogin", false) as Boolean
     }
@@ -102,6 +103,13 @@ fun ConfigContent() {
             hint = "",
             type = SettingType.click,
             todo = true
+        ),
+        TextConfigElement(
+            title = "Set Colour",
+            description = "Iroha nihoheto, chirinuruwo.",
+            hint = "",
+            type = SettingType.list,
+            todo = false
         ),
         TextConfigElement(
             title = "Language",
@@ -127,13 +135,16 @@ fun ConfigContent() {
                 val item = settingItems[index]
                 var isTextDialog by remember { mutableStateOf(false) }
                 var isPathDialog by remember { mutableStateOf(false) }
+                var isListDialog by remember { mutableStateOf(false) }
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .background(color = MaterialTheme.colorScheme.surface)
                         .clickable {
                             when (item.type) {
-                                SettingType.list -> {}
+                                SettingType.list -> {
+                                    isListDialog = true
+                                }
                                 SettingType.text -> {
                                     isTextDialog = true
                                 }
@@ -156,15 +167,12 @@ fun ConfigContent() {
                         .fillMaxWidth()
                         .height(20.dp))
                 }
-                if (isTextDialog) {
-                    TextConfigDialog(title = item.title,hint = item.hint){
-                        isTextDialog = false
-                    }
-                }
-                if (isPathDialog) {
-                    PathConfigDialog(title = item.title,hint = item.hint){ isPathDialog = false }
 
-                }
+                if (isTextDialog) TextConfigDialog(title = item.title,hint = item.hint){ isTextDialog = false }
+
+                if (isPathDialog) PathConfigDialog(title = item.title,hint = item.hint){ isPathDialog = false }
+
+                if (isListDialog) ListConfigDialog(title = item.title,hint = item.hint){ isListDialog = false }
             }
             if ((isLogin as Boolean)){
                 item{
@@ -337,6 +345,44 @@ fun PathConfigDialog(
     }
 }
 
+@Composable
+fun ListConfigDialog(
+    title : String,
+    hint : String,
+    onDismiss: () -> Unit,
+) {
+    val context = LocalContext.current
+    val selectionsString = IOBundle.get(context, "config", "_$title", "") as String
+    val selections = selectionsString.splitToSequence(",").map { it.trim() }.toList()
+
+    Dialog(onDismissRequest = onDismiss) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text(title, style = MaterialTheme.typography.headlineSmall)
+                Spacer(modifier = Modifier.height(16.dp))
+
+                LazyColumn(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                    items(selections.size){ index ->
+                        Box(Modifier.fillMaxWidth().padding(4.dp)
+                            .clickable( onClick = {
+                                IOBundle.save(context,"config",title,index)
+                                Toast.makeText(context,"The change will take effect on next launch", Toast.LENGTH_SHORT).show()
+                                onDismiss()
+                            } )
+                        ) {
+                            Text(selections[index], style = MaterialTheme.typography.bodyLarge)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
 
 private fun extractPathFromTreeUri(context: Context, treeUri: android.net.Uri): String? {
     return try {

@@ -253,6 +253,21 @@ class SQLManager(context: Context) {
         }
     }
 
+    fun isPlaylistExists(playlistId: Int): Boolean {
+        val db = dbHelper.readableDatabase
+        val cursor = db.rawQuery(
+            "SELECT COUNT(*) FROM playlists WHERE id = ?",
+            arrayOf(playlistId.toString())
+        )
+        return try {
+            cursor.moveToFirst()
+            cursor.getInt(0) > 0
+        } finally {
+            cursor.close()
+            db.close()
+        }
+    }
+
     // ---------------------- 歌曲相关操作 ----------------------
     // 插入歌曲到数据库（路径重复时忽略，避免重复添加）
     fun insertSong(song: SongModel): Long {
@@ -422,6 +437,21 @@ class SQLManager(context: Context) {
         return try {
             cursor.moveToFirst()
             cursor.getInt(0)
+        } finally {
+            cursor.close()
+            db.close()
+        }
+    }
+
+    fun isSongInPlaylist(playlistId: Int, songId: Int): Boolean {
+        val db = dbHelper.readableDatabase
+        val cursor = db.rawQuery(
+            "SELECT COUNT(*) FROM playlist_songs WHERE playlist_id = ? AND song_id = ?",
+            arrayOf(playlistId.toString(), songId.toString())
+        )
+        return try {
+            cursor.moveToFirst()
+            cursor.getInt(0) > 0
         } finally {
             cursor.close()
             db.close()

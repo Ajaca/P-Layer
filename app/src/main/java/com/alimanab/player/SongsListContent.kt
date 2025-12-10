@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -43,15 +44,18 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.produceState
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.window.Dialog
@@ -73,7 +77,6 @@ fun SongsListContent( list : ListModel, onBackClick: () -> Unit = {}, onPlay: (L
     val playlistSongs by sqlManager.getListSongsFlow(list.id)
         .collectAsState(initial = emptyList())
 
-    // 根据 list.id 选择数据源
     val songsInList = if (list.id == -1) allSongs else playlistSongs
 
 
@@ -179,6 +182,12 @@ fun SongCard(Song : SongModel,List : ListModel,onClick: () -> Unit, onConfig: ()
     var isShowRemoveFromList by remember { mutableStateOf(false) }
     var isShowInfo by remember { mutableStateOf(false) }
     val isLogin by remember { mutableStateOf(IOBundle.get(context, "login", "isLogin", false) as Boolean) }
+    val userName by remember { mutableStateOf(IOBundle.get(context,"login","Username","") as String) }
+    var isLoved by remember { mutableStateOf(false) }
+    val usersLovedID = sqlManager.getPlaylistIdByName(sqlManager.getUserIdByUsername(userName),"${userName}'s Loved")
+    if (isLogin && sqlManager.isSongInPlaylist(usersLovedID,Song.id)) {
+        isLoved = true
+    }
     Surface(
         modifier = Modifier
             .fillMaxWidth()
@@ -231,6 +240,7 @@ fun SongCard(Song : SongModel,List : ListModel,onClick: () -> Unit, onConfig: ()
                 onDismissRequest = { isConfigVisible = false ; onConfig() }
             ) {
                 Surface(
+                    modifier = Modifier.wrapContentWidth(unbounded = true),
                     shape = RoundedCornerShape(4.dp),
                     tonalElevation = 3.dp,
                     shadowElevation = 6.dp,
@@ -239,8 +249,13 @@ fun SongCard(Song : SongModel,List : ListModel,onClick: () -> Unit, onConfig: ()
                     Column {
                         PopupMenuItem(
                             text = "Love",
-                            icon = Icons.Default.Favorite,
-                            onClick = { isConfigVisible = false }
+                            icon = if (isLoved) Icons.Default.Favorite else Icons.Outlined.FavoriteBorder,
+                            onClick = {
+                                if (isLoved) sqlManager.removeSongFromPlaylist(usersLovedID,Song.id)
+                                else sqlManager.addSongToPlaylist(usersLovedID,Song.id)
+                                isConfigVisible = false
+                                isLoved = true
+                            }
                         )
                         PopupMenuItem(
                             text = "Add to List",
@@ -307,8 +322,10 @@ fun InfoDialog(Song : SongModel,onDismiss : () -> Unit) {
 
 @Composable
 fun AddToListDialog(UserID : Int,Song: SongModel,onDismiss : () -> Unit,onAdd : (Int) -> Unit) {
-    val List = sqlManager.getUserPlaylists(UserID)
-    val ListModels = List.map { playlistName ->
+    val list = sqlManager.getUserPlaylists(UserID).toMutableList()
+    val context = LocalContext.current
+    val user = IOBundle.get(context,"login","Username","") as String
+    val ListModels = list.map { playlistName ->
         val playlistId = sqlManager.getPlaylistIdByName(UserID, playlistName)
         ListModel(
             name = playlistName,
@@ -321,14 +338,59 @@ fun AddToListDialog(UserID : Int,Song: SongModel,onDismiss : () -> Unit,onAdd : 
             Column(Modifier.padding(10.dp)) {
                 Text("Add to List",style = MaterialTheme.typography.headlineMedium)
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                    items(List.size) { index ->
-                        CardSongsList(
+                    items(list.size) { index ->
+                        AddCardSongsList(
                             listModel = ListModels[index],
-                            onClick = { sqlManager.addSongToPlaylist(ListModels[index].id,Song.id) ; onDismiss() },
-                            onConfig = {}
+                            onClick = { sqlManager.addSongToPlaylist(ListModels[index].id,Song.id) ; onDismiss() }
                         )
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+fun AddCardSongsList(listModel: ListModel, onClick: () -> Unit ) {
+    val context = LocalContext.current
+    var isConfirmDelete by remember { mutableStateOf(false) }
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(8.dp)
+            .clickable{ onClick() },
+        elevation = CardDefaults.cardElevation(4.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Surface(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(shape = RectangleShape),
+                color = MaterialTheme.colorScheme.primaryContainer,
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Star,
+                    contentDescription = "playlist",
+                    modifier = Modifier
+                        .size(16.dp)
+                        .padding(8.dp),
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+            }
+            Column(
+                modifier = Modifier
+                    .weight(3f)
+                    .offset(x=20.dp),
+            ) {
+                Text(text = listModel.name, fontSize = 16.sp)
             }
         }
     }
