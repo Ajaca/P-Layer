@@ -47,7 +47,6 @@ class LightMusicService : Service() {
 
     enum class PlayMode { SEQUENTIAL, RANDOM, SINGLE_LOOP }
 
-    // 暴露给外部的 LiveData（可选）
     private val _currentSongLiveData = MutableLiveData<SongModel?>()
     val currentSongLiveData: LiveData<SongModel?> get() = _currentSongLiveData
 
@@ -110,8 +109,6 @@ class LightMusicService : Service() {
             }
         }
     }
-
-    // ========== 对外提供的控制方法 ==========
 
     fun setPlaylist(list: List<SongModel>, startIndex: Int = 0, mode: PlayMode = PlayMode.SEQUENTIAL) {
         playlist = list.toMutableList()
@@ -259,9 +256,9 @@ object PlayerManager {
             // 此时 context 已通过 init 初始化，可安全使用
             val intent = Intent(context, LightMusicService::class.java)
             val bindResult = context.bindService(intent, connection, Context.BIND_AUTO_CREATE)
-            Log.d("MusicPlayer", "bindService 返回值: $bindResult") // 验证绑定是否发起成功
+            Log.d("MusicPlayer", "bindService 返回值: $bindResult")
         } else {
-            Log.d("MusicPlayer", "已经绑定过了")
+            Log.d("MusicPlayer", "Bound")
         }
     }
 

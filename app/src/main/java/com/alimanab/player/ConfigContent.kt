@@ -111,6 +111,7 @@ fun ConfigContent() {
             type = SettingType.list,
             todo = false
         ),
+        /*
         TextConfigElement(
             title = "Language",
             description = "Change current Language",
@@ -118,6 +119,7 @@ fun ConfigContent() {
             type = SettingType.list,
             todo =  false
         )
+        */
     )
     Column(modifier = Modifier
         .fillMaxSize()

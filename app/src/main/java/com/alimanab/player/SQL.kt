@@ -95,7 +95,7 @@ class SQL(context: Context?) : SQLiteOpenHelper(context, "SimpleMusic.db", null,
                 )
             """)
 
-            // 复制旧表数据（只保留 id、user_id、name，丢弃旧的 songs 字段）
+            // 复制旧表数据
             db?.execSQL("INSERT INTO playlists_temp (id, user_id, name) SELECT id, user_id, name FROM playlists")
 
             // 删除旧表
@@ -109,8 +109,6 @@ class SQL(context: Context?) : SQLiteOpenHelper(context, "SimpleMusic.db", null,
 class SQLManager(context: Context) {
     private val dbHelper = SQL(context)
 
-    // ---------------------- 用户相关操作 ----------------------
-    // 注册用户
     fun register(username: String, password: String): Boolean {
         val db = dbHelper.writableDatabase
         return try {
@@ -119,13 +117,12 @@ class SQLManager(context: Context) {
             true
         } catch (e: Exception) {
             e.printStackTrace()
-            false  // 用户名重复或其他错误返回 false
+            false
         } finally {
             db.close()
         }
     }
 
-    // 用户登录（验证用户名密码）
     fun login(username: String, password: String): Boolean {
         val db = dbHelper.readableDatabase
         val cursor = db.rawQuery(
@@ -138,7 +135,6 @@ class SQLManager(context: Context) {
         return success
     }
 
-    // 根据用户名获取用户ID（后续操作需要用户ID关联）
     fun getUserIdByUsername(username: String): Int {
         val db = dbHelper.readableDatabase
         val cursor: Cursor = db.query(
@@ -162,8 +158,6 @@ class SQLManager(context: Context) {
         }
     }
 
-    // ---------------------- 歌单相关操作 ----------------------
-    // 创建歌单
     fun createPlaylist(userId: Int, playlistName: String): Boolean {
         val db = dbHelper.writableDatabase
         return try {
@@ -178,7 +172,6 @@ class SQLManager(context: Context) {
         }
     }
 
-    // 获取用户的所有歌单名称
     fun getUserPlaylists(userId: Int): List<String> {
         val playlists = mutableListOf<String>()
         val db = dbHelper.readableDatabase
@@ -194,7 +187,6 @@ class SQLManager(context: Context) {
         return playlists
     }
 
-    // 根据歌单名称获取歌单ID
     fun getPlaylistIdByName(userId: Int, playlistName: String): Int {
         val db = dbHelper.readableDatabase
         val cursor: Cursor = db.query(
@@ -221,7 +213,6 @@ class SQLManager(context: Context) {
     fun deletePlaylistById(userId: Int, playlistId: Int): Boolean {
         val db = dbHelper.writableDatabase
         return try {
-            // 验证歌单是否属于该用户
             val cursor = db.query(
                 "playlists",
                 arrayOf("id"),
@@ -234,10 +225,9 @@ class SQLManager(context: Context) {
             cursor.close()
 
             if (!exists) {
-                return false // 歌单不存在或不属于该用户
+                return false
             }
 
-            // 删除歌单（级联删除关联的歌曲关系）
             val deletedRows = db.delete(
                 "playlists",
                 "id = ?",
@@ -268,8 +258,6 @@ class SQLManager(context: Context) {
         }
     }
 
-    // ---------------------- 歌曲相关操作 ----------------------
-    // 插入歌曲到数据库（路径重复时忽略，避免重复添加）
     fun insertSong(song: SongModel): Long {
         val db = dbHelper.writableDatabase
         val values = ContentValues().apply {
@@ -281,17 +269,15 @@ class SQLManager(context: Context) {
             put("size", song.size)
         }
         return try {
-            // CONFLICT_IGNORE：路径重复时不插入，返回 -1
             db.insertWithOnConflict("songs", null, values, SQLiteDatabase.CONFLICT_IGNORE)
         } catch (e: Exception) {
             e.printStackTrace()
-            -1  // 插入失败返回 -1
+            -1
         } finally {
             db.close()
         }
     }
 
-    // 根据文件路径获取歌曲ID
     fun getSongIdByPath(path: String): Int {
         val db = dbHelper.readableDatabase
         val cursor: Cursor = db.query(
@@ -315,7 +301,6 @@ class SQLManager(context: Context) {
         }
     }
 
-    // 获取数据库中所有扫描到的歌曲
     fun getAllSongs(): List<SongModel> {
         val songs = mutableListOf<SongModel>()
         val db = dbHelper.readableDatabase
@@ -339,8 +324,6 @@ class SQLManager(context: Context) {
         return songs
     }
 
-    // ---------------------- 歌单-歌曲关联操作 ----------------------
-    // 添加歌曲到歌单（通过关联表实现多对多）
     fun addSongToPlaylist(playlistId: Int, songId: Int): Boolean {
         val db = dbHelper.writableDatabase
         val values = ContentValues().apply {
@@ -364,12 +347,10 @@ class SQLManager(context: Context) {
         }
     }
 
-    // 获取歌单中的所有歌曲（完整歌曲信息）
     fun getPlaylistSongs(playlistId: Int): List<SongModel> {
         val songs = mutableListOf<SongModel>()
         val db = dbHelper.readableDatabase
 
-        // 关联查询：通过 playlist_songs 关联 songs 表，获取歌单对应的所有歌曲
         val query = """
             SELECT s.* FROM songs s
             JOIN playlist_songs ps ON s.id = ps.song_id
@@ -396,7 +377,6 @@ class SQLManager(context: Context) {
         return songs
     }
 
-    // 从歌单中移除歌曲
     fun removeSongFromPlaylist(playlistId: Int, songId: Int): Boolean {
         val db = dbHelper.writableDatabase
         return try {
@@ -428,9 +408,6 @@ class SQLManager(context: Context) {
         }
     }
 
-    /**
-     * 获取数据库中歌曲的总数
-     */
     fun getSongCount(): Int {
         val db = dbHelper.readableDatabase
         val cursor = db.rawQuery("SELECT COUNT(*) FROM songs", null)
@@ -461,20 +438,20 @@ class SQLManager(context: Context) {
     fun getListSongsFlow(listID : Int): Flow<List<SongModel>> = flow {
         while (true) {
             emit(getPlaylistSongs(listID))
-            delay(1000) // 每秒检查一次，或者根据实际需求调整
+            delay(1000) // 每秒检查一次
         }
     }.distinctUntilChanged()
 
     fun getAllSongsFlow(): Flow<List<SongModel>> = flow {
         while (true) {
             emit(getAllSongs())
-            delay(1000) // 每秒检查一次，或者根据实际需求调整
+            delay(1000) // 每秒检查一次
         }
     }.distinctUntilChanged()
 
 }
 
-// 歌曲数据模型（与数据库 songs 表字段完全对应）
+// 歌曲数据模型
 data class SongModel(
     val id: Int = -1,          // 数据库主键（默认 -1 表示未插入数据库）
     val title: String,         // 歌曲标题
