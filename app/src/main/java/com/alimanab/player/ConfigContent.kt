@@ -427,20 +427,20 @@ private fun importSongsFromPath(context: Context) {
         } else {
             val pathStr = musicPathObj?.toString() ?: ""
             if (pathStr == "kotlin.jvm.internal.StringCompanionObject" || pathStr.isEmpty()) {
-                Toast.makeText(context, "请先设置音乐路径", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "Please set the route first", Toast.LENGTH_SHORT).show()
                 return
             }
             pathStr
         }
 
         if (musicPath.isEmpty()) {
-            Toast.makeText(context, "请先设置音乐路径", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, "Please set the route first", Toast.LENGTH_SHORT).show()
             return
         }
 
         val musicDir = File(musicPath)
         if (!musicDir.exists() || !musicDir.isDirectory) {
-            Toast.makeText(context, "指定的路径不存在或不是目录: $musicPath", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, "Route is not exist: $musicPath", Toast.LENGTH_SHORT).show()
             return
         }
 
@@ -449,7 +449,7 @@ private fun importSongsFromPath(context: Context) {
         traverseDirForImport(musicDir, audioFiles)
 
         if (audioFiles.isEmpty()) {
-            Toast.makeText(context, "在指定路径下未找到音频文件", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, "No music found", Toast.LENGTH_SHORT).show()
             return
         }
 
@@ -495,22 +495,22 @@ private fun importSongsFromPath(context: Context) {
         // 构建准确的提示信息
         val message = when {
             newInsertCount > 0 && alreadyExistsCount > 0 ->
-                "成功导入 $newInsertCount 首新歌曲，$alreadyExistsCount 首已存在"
+                " $newInsertCount Imported，$alreadyExistsCount exists"
             newInsertCount > 0 ->
-                "成功导入全部 $newInsertCount 首歌曲"
+                " $newInsertCount Imported successfully"
             alreadyExistsCount > 0 && failedCount == 0 ->
-                "所有 ${alreadyExistsCount} 首歌曲均已存在"
+                "All ${alreadyExistsCount} songs exists"
             failedCount > 0 ->
-                "导入完成：$newInsertCount 首新导入，$alreadyExistsCount 首已存在，$failedCount 首失败"
+                "Completed：$newInsertCount imported，$alreadyExistsCount exists，$failedCount failed"
             else ->
-                "导入完成，共处理 ${audioFiles.size} 首歌曲"
+                "Completed, ${audioFiles.size} songs progressed"
         }
 
         Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
 
     } catch (e: Exception) {
         e.printStackTrace()
-        Toast.makeText(context, "导入失败: ${e.message}", Toast.LENGTH_SHORT).show()
+        Toast.makeText(context, "Fail: ${e.message}", Toast.LENGTH_SHORT).show()
     }
 }
 
