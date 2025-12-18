@@ -102,7 +102,7 @@ fun SongsListContent( list : ListModel, onBackClick: () -> Unit = {}, onPlay: (L
                     IconButton(onClick = onBackClick) {
                         Icon(
                             imageVector = Icons.Default.ArrowBack,
-                            contentDescription = "返回",
+                            contentDescription = "back",
                             tint = MaterialTheme.colorScheme.onPrimaryContainer
                         )
                     }
@@ -262,7 +262,7 @@ fun SongCard(Song : SongModel,List : ListModel,onClick: () -> Unit, onConfig: ()
                             icon = Icons.Default.Add,
                             onClick = { isShowAddToList = true ; isConfigVisible = false }
                         )
-                        if(List.id != -1){
+                        if(List.id != -2){
                             PopupMenuItem(
                                 text = "Remove from List",
                                 icon = Icons.Default.Delete,
