@@ -77,7 +77,7 @@ fun SongsListContent( list : ListModel, onBackClick: () -> Unit = {}, onPlay: (L
     val playlistSongs by sqlManager.getListSongsFlow(list.id)
         .collectAsState(initial = emptyList())
 
-    val songsInList = if (list.id == -1) allSongs else playlistSongs
+    val songsInList = if (list.id == -2) allSongs else playlistSongs
 
 
     Scaffold(

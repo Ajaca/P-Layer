@@ -78,7 +78,7 @@ fun HomeContent( onChangeBlank : (ListModel) -> Unit ) {
                 Box(Modifier.weight(1f)){DividedVerticalCardSongsList("History",{ onChangeBlank(ListModel(name = "History",owner = sqlManager.getUserIdByUsername("GLOBAL"),id = sqlManager.getPlaylistIdByName(sqlManager.getUserIdByUsername("GLOBAL"),"History"))) })}
             }
         } else {
-            DividedCardSongsList("All Songs",{ onChangeBlank(ListModel(name = "All Songs",owner = 0,id = -1))})
+            DividedCardSongsList("All Songs",{ onChangeBlank(ListModel(name = "All Songs",owner = -1,id = -2))})
         }
         Spacer(Modifier.height(6.dp))
         if (isLogin) {
